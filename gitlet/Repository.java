@@ -85,7 +85,7 @@ public class Repository implements Serializable {
             BLOBS_DIR.mkdir();
         }
         // 生成初始的commit
-        Commit commit = new Commit("initial commit", "","");
+        Commit commit = new Commit("initial commit", "", "");
         // HEAD文件里面存放这个初始commit的文件位置
         Utils.writeContents(HEAD_FILE, "refs/heads/master");
         // refs/heads/master文件存放这个commit的SHA1
@@ -358,6 +358,7 @@ public class Repository implements Serializable {
 
     /**
      * 新建一条commit，HEAD指针往后移动到这个commit
+     *
      * @param message
      */
     public void commit(String message, String parent2) {
@@ -365,7 +366,7 @@ public class Repository implements Serializable {
             System.out.println("Please enter a commit message.");
             return;
         }
-        if (currentStage.empty() && !parent2.equals("")) { // staging area为空
+        if (currentStage.empty() && parent2.equals("")) { // staging area为空
             System.out.println("No changes added to the commit.");
             return;
         }
@@ -457,7 +458,7 @@ public class Repository implements Serializable {
 
 // 如果上一个commit中追踪了这个文件，就添加到removed列表
         if (commit.hasFile(fileName)) {
-            currentStage.addRm(fileName, "lalalla");
+            currentStage.addRm(fileName);
 // 如果之前都有这个文件 才需要删掉这个文件并加入removed
             File file = join(CWD, fileName);
             restrictedDelete(file);
@@ -518,8 +519,8 @@ public class Repository implements Serializable {
     public void showRemoved() {
         System.out.println("=== Removed Files ===");
 
-        TreeMap<String, String> map = currentStage.getRemovedFileToBlob();
-        for (String file : map.keySet()) {
+        Set<String> removed = currentStage.getRemovedFileToBlob();
+        for (String file : removed) {
             System.out.println(file);
         }
     }

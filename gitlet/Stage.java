@@ -1,17 +1,18 @@
 package gitlet;
 
 import java.io.Serializable;
-import java.util.TreeMap;
+import java.util.*;
+
 import static gitlet.Repository.INDEX_FILE;
 import static gitlet.Utils.readObject;
 
 public class Stage implements Serializable {
-    private final TreeMap<String, String> fileToBlob; // 存放一个stage状态的各种file
-    private final TreeMap<String, String> removedFileToBlob;
+    private TreeMap<String, String> fileToBlob; // 存放一个stage状态的各种file
+    private Set<String> removedFileToBlob;
 
     public Stage() {
         fileToBlob = new TreeMap<>();
-        removedFileToBlob = new TreeMap<>();
+        removedFileToBlob = new HashSet<>();
     }
 
     public static Stage fromFile() {
@@ -21,6 +22,10 @@ public class Stage implements Serializable {
     public static void cleanStage() {
         Stage stage = new Stage();
         stage.saveStage();
+    }
+
+    public void saveStage() {
+        Utils.writeObject(INDEX_FILE, this);
     }
 
     public void add(String fileName, String hash) {
@@ -39,12 +44,12 @@ public class Stage implements Serializable {
         return fileToBlob.containsKey(fileName);
     }
 
-    public TreeMap<String, String> getRemovedFileToBlob() {
+    public Set<String> getRemovedFileToBlob() {
         return removedFileToBlob;
     }
 
-    public void addRm(String fileName, String hash) {
-        removedFileToBlob.put(fileName, hash);
+    public void addRm(String fileName) {
+        removedFileToBlob.add(fileName);
     }
 
     public void removeRm(String fileName) {
@@ -57,9 +62,5 @@ public class Stage implements Serializable {
 
     public TreeMap<String, String> getFileToBlob() {
         return fileToBlob;
-    }
-
-    public void saveStage() {
-        Utils.writeObject(INDEX_FILE, this);
     }
 }

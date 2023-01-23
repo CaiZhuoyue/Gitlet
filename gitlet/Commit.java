@@ -38,6 +38,35 @@ public class Commit implements Serializable {
         commitHash = generateHash();
     }
 
+    public void add(TreeMap<String, String> ftb) {
+        for (String fileName : ftb.keySet()) {
+            add(fileName, ftb.get(fileName));
+        }
+    }
+
+    public TreeMap<String, String> getFileToBlob() {
+        return fileToBlob;
+    }
+
+    private String getTimeStamp() {
+        String ptn = "EEE MMM d HH:mm:ss yyyy Z";
+        DateFormat dateFormat = new SimpleDateFormat(ptn, Locale.US);
+        if (parent.equals("")) {
+            return dateFormat.format(new Date(0));
+        } else {
+            return dateFormat.format(new Date());
+        }
+    }
+
+    private String generateHash() {
+        // 获取所有内容的SHA1-commitHash
+        return Utils.sha1(message, timestamp, parent, fileToBlob.toString());
+    }
+
+    public void add(String fileName, String blob) {
+        fileToBlob.put(fileName, blob);
+    }
+
     public Commit(String msg, String p) {
         fileToBlob = new TreeMap<>();
 
@@ -60,37 +89,12 @@ public class Commit implements Serializable {
         return commit;
     }
 
-    private String getTimeStamp() {
-        String ptn = "EEE MMM d HH:mm:ss yyyy Z";
-        DateFormat dateFormat = new SimpleDateFormat(ptn, Locale.US);
-        if (parent.equals("")) {
-            return dateFormat.format(new Date(0));
-        } else {
-            return dateFormat.format(new Date());
-        }
-    }
-
-    private String generateHash() {
-        // 获取所有内容的SHA1-commitHash
-        return Utils.sha1(message, timestamp, parent, fileToBlob.toString());
-    }
-
     public String getHash() {
         return commitHash;
     }
 
-    public void add(TreeMap<String, String> ftb) {
-        for (String fileName : ftb.keySet()) {
-            add(fileName, ftb.get(fileName));
-        }
-    }
-
-    public void add(String fileName, String blob) {
-        fileToBlob.put(fileName, blob);
-    }
-
-    public void remove(TreeMap<String, String> ftb) {
-        for (String fileName : ftb.keySet()) {
+    public void remove(Set<String> ftb) {
+        for (String fileName : ftb) {
             remove(fileName);
         }
     }
@@ -114,10 +118,6 @@ public class Commit implements Serializable {
 
     public String getBlob(String fileName) {
         return fileToBlob.get(fileName);
-    }
-
-    public TreeMap<String, String> getFileToBlob() {
-        return fileToBlob;
     }
 
     public Set<String> getFiles() {

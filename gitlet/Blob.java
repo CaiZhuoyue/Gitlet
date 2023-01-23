@@ -21,6 +21,11 @@ public class Blob implements Serializable {
         return blob.getContent();
     }
 
+    public String getContent() {
+        String s = new String(content);
+        return s;
+    }
+
     public static Blob fromFile(String blobName) {
         Blob blob = readObject(join(BLOBS_DIR, blobName), Blob.class);
         return blob;
@@ -32,10 +37,5 @@ public class Blob implements Serializable {
 
     public void saveBlob() {
         writeObject(join(BLOBS_DIR, blobHash), this); // 当前commit写到文件中
-    }
-
-    public String getContent() {
-        String s = new String(content);
-        return s;
     }
 }

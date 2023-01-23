@@ -36,9 +36,9 @@ public class Main {
                 break;
             case "commit":
                 if (args.length >= 2) {
-                    repo.commit(args[1]);
+                    repo.commit(args[1],"");
                 } else {
-                    repo.commit("");
+                    repo.commit("","");
                 }
                 break;
             case "status":

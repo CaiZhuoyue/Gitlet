@@ -85,13 +85,18 @@ public class Repository implements Serializable {
             BLOBS_DIR.mkdir();
         }
         // 生成初始的commit
-        Commit commit = new Commit("initial commit", "");
+        Commit commit = new Commit("initial commit", "","");
         // HEAD文件里面存放这个初始commit的文件位置
         Utils.writeContents(HEAD_FILE, "refs/heads/master");
         // refs/heads/master文件存放这个commit的SHA1
         writeRefs("master", commit.getHash());
         commit.saveCommit(); // 保存当前commit
         Stage.cleanStage();
+    }
+
+    public void writeRefs(String branch, String commitID) {
+        writeContents(join(REFS_HEADS_DIR, branch), commitID);
+        return;
     }
 
     /**
@@ -169,21 +174,69 @@ public class Repository implements Serializable {
     }
 
     /**
-     * 移除一个branch
+     * checkout一个分支
      *
      * @param branch
      */
-    public void removeBranch(String branch) {
+    public void checkout(String branch) {
         if (branch.equals(currentBranch)) {
-            System.out.println("Cannot remove the current branch.");
+            System.out.println("No need to checkout the current branch. ");
             return;
         }
         if (!hasBranch(branch)) {
-            System.out.println("A branch with that name does not exist.");
+            System.out.println("No such branch exists.");
             return; // 没有这个branch
         }
+
+        String commitID = getBranchHead(branch); // new branch的HEAD指向的commitid
+
+        changeCommit(currentCommit, commitID);
+
+        writeContents(HEAD_FILE, "refs/heads/" + branch);
+    }
+
+    /**
+     * 查看commitID号commit中的fileName文件
+     *
+     * @param commitID
+     * @param fileName
+     */
+    public void checkout(String commitID, String fileName) {
+// 如果使用的是uid（比较短的id）需要找到原始的id
+        if (commitID.length() < 40) {
+            List<String> fileList = plainFilenamesIn(COMMITS_DIR);
+            for (String tmp : fileList) {
+                if (tmp.startsWith(commitID)) {
+                    commitID = tmp;
+                    break;
+                }
+            }
+        }
+        File f = join(COMMITS_DIR, commitID);
+
+        if (!f.exists()) {
+            System.out.println("No commit with that id exists.");
+            return;
+        }
+
+        Commit commit = Commit.fromFile(commitID);
+
+        if (!commit.hasFile(fileName)) { // 没有这个文件
+            System.out.println("File does not exist in that commit.");
+            return;
+        }
+        writeBlobToFile(fileName, commit.getBlob(fileName));
+    }
+
+    /**
+     * 获得branch分支的头commit
+     *
+     * @param branch
+     * @return
+     */
+    public String getBranchHead(String branch) {
         File file = join(REFS_HEADS_DIR, branch);
-        file.delete();
+        return readContentsAsString(file);
     }
 
     public boolean hasBranch(String branch) {
@@ -234,28 +287,6 @@ public class Repository implements Serializable {
     }
 
     /**
-     * checkout一个分支
-     *
-     * @param branch
-     */
-    public void checkout(String branch) {
-        if (branch.equals(currentBranch)) {
-            System.out.println("No need to checkout the current branch. ");
-            return;
-        }
-        if (!hasBranch(branch)) {
-            System.out.println("No such branch exists.");
-            return; // 没有这个branch
-        }
-
-        String commitID = getBranchHead(branch); // new branch的HEAD指向的commitid
-
-        changeCommit(currentCommit, commitID);
-
-        writeContents(HEAD_FILE, "refs/heads/" + branch);
-    }
-
-    /**
      * 把blob中的内容写到file中去，是安全的，会判断是否有这个文件
      *
      * @param fileName
@@ -265,6 +296,51 @@ public class Repository implements Serializable {
         File f = join(CWD, fileName);
 
         writeContents(f, Blob.getContentFromFile(blobHash));
+    }
+
+    private boolean hasUntracked(String cid1, String cid2) {
+        Commit c1 = Commit.fromFile(cid1);
+        Commit c2 = Commit.fromFile(cid2);
+        List<String> files = plainFilenamesIn(CWD);
+
+        for (String f : c2.getFiles()) {
+            if (!c1.hasFile(f) && files.contains(f)) {
+                return true;
+            }
+        }
+
+        for (String f : c1.getFiles()) {
+            if (!c2.hasFile(f) && files.contains(f)) {
+                String curFile = sha1(readContents(join(CWD, f)));
+                if (!c1.getBlob(f).equals(curFile)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public void writeFileFromCommit(String fileName, String cid) {
+        Commit c = Commit.fromFile(cid);
+
+    }
+
+    /**
+     * 移除一个branch
+     *
+     * @param branch
+     */
+    public void removeBranch(String branch) {
+        if (branch.equals(currentBranch)) {
+            System.out.println("Cannot remove the current branch.");
+            return;
+        }
+        if (!hasBranch(branch)) {
+            System.out.println("A branch with that name does not exist.");
+            return; // 没有这个branch
+        }
+        File file = join(REFS_HEADS_DIR, branch);
+        file.delete();
     }
 
     public void reset(String commitID) {
@@ -280,76 +356,26 @@ public class Repository implements Serializable {
         writeRefs(currentBranch, commitID); // 头指针指向这个位置
     }
 
-    public void writeRefs(String branch, String commitID) {
-        writeContents(join(REFS_HEADS_DIR, branch), commitID);
-        return;
-    }
-
-    /**
-     * 查看commitID号commit中的fileName文件
-     *
-     * @param commitID
-     * @param fileName
-     */
-    public void checkout(String commitID, String fileName) {
-// 如果使用的是uid（比较短的id）需要找到原始的id
-        if (commitID.length() < 40) {
-            List<String> fileList = plainFilenamesIn(COMMITS_DIR);
-            for (String tmp : fileList) {
-                if (tmp.startsWith(commitID)) {
-                    commitID = tmp;
-                    break;
-                }
-            }
-        }
-        File f = join(COMMITS_DIR, commitID);
-
-        if (!f.exists()) {
-            System.out.println("No commit with that id exists.");
-            return;
-        }
-
-        Commit commit = Commit.fromFile(commitID);
-
-        if (!commit.hasFile(fileName)) { // 没有这个文件
-            System.out.println("File does not exist in that commit.");
-            return;
-        }
-        writeBlobToFile(fileName, commit.getBlob(fileName));
-    }
-
     /**
      * 新建一条commit，HEAD指针往后移动到这个commit
-     *
      * @param message
      */
-    public void commit(String message) {
+    public void commit(String message, String parent2) {
         if (message.equals("")) {
             System.out.println("Please enter a commit message.");
             return;
         }
-        if (currentStage.empty()) { // staging area为空
+        if (currentStage.empty() && !parent2.equals("")) { // staging area为空
             System.out.println("No changes added to the commit.");
             return;
         }
-        Commit commit = new Commit(message, currentCommit);
-        commit.add(currentStage.getFileToBlob()); // 把stage里面的blob都加进去
-        commit.remove(currentStage.getRemovedFileToBlob());
-        String newCommit = commit.getHash();
-        commit.saveCommit();
-
-        writeRefs(currentBranch, newCommit);
-        Stage.cleanStage();
-    }
-
-    public void commit(String message, String parent2) {
         Commit commit = new Commit(message, currentCommit, parent2);
         commit.add(currentStage.getFileToBlob()); // 把stage里面的blob都加进去
-        commit.remove(currentStage.getRemovedFileToBlob());
+        commit.remove(currentStage.getRemovedFileToBlob()); // 把要remove的blob都remove
         String newCommit = commit.getHash();
         commit.saveCommit();
 
-        writeRefs(currentBranch, newCommit);
+        writeRefs(currentBranch, newCommit); // 头指针移动到当前commit
         Stage.cleanStage();
     }
 
@@ -360,17 +386,11 @@ public class Repository implements Serializable {
      */
     public void branch(String branch) { // 新建一个分支
         File file = join(REFS_HEADS_DIR, branch);
-        if (!file.exists()) {
-            try {
-                file.createNewFile();
-            } catch (IOException e) {
-                System.exit(0);
-            }
-        } else { // 已经存在这个分支
+        if (file.exists()) { // 已经存在这个分支
             System.out.println("A branch with that name already exists.");
             return;
         }
-        writeContents(file, currentCommit);
+        writeContents(file, currentCommit); //
     }
 
     /**
@@ -571,17 +591,6 @@ public class Repository implements Serializable {
     }
 
     /**
-     * 获得branch分支的头commit
-     *
-     * @param branch
-     * @return
-     */
-    public String getBranchHead(String branch) {
-        File file = join(REFS_HEADS_DIR, branch);
-        return readContentsAsString(file);
-    }
-
-    /**
      * @param cid1
      * @param cid2
      * @param fileName
@@ -765,28 +774,6 @@ public class Repository implements Serializable {
     private void writeCommitToFile(String cid, String fileName) {
         Commit c = Commit.fromFile(cid);
         writeBlobToFile(fileName, c.getBlob(fileName));
-    }
-
-    private boolean hasUntracked(String cid1, String cid2) {
-        Commit c1 = Commit.fromFile(cid1);
-        Commit c2 = Commit.fromFile(cid2);
-        List<String> files = plainFilenamesIn(CWD);
-
-        for (String f : c2.getFiles()) {
-            if (!c1.hasFile(f) && files.contains(f)) {
-                return true;
-            }
-        }
-
-        for (String f : c1.getFiles()) {
-            if (!c2.hasFile(f) && files.contains(f)) {
-                String curFile = sha1(readContents(join(CWD, f)));
-                if (!c1.getBlob(f).equals(curFile)) {
-                    return true;
-                }
-            }
-        }
-        return false;
     }
 
 }

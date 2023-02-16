@@ -1,11 +1,37 @@
 # Gitlet Design Document
 
-**Name**:caizhuoyue
+**Author:caizhuoyue**
 
 一些要点
 
 * final关键词表示赋值一次之后就不能改变，对于一些需要改动的map就不能用final关键词
 * 不需要给外界使用的函数就可以设置为private
+
+#### 使用方式：
+
+首先`cd gitlet`,`javac *.java`,然后`cd ..`回到proj2的文件夹
+
+**初始化gitlet仓库：**`java gitlet.Main init`
+
+**add操作：**`java gitlet.Main add xxx`
+
+**remove操作：**`java gitlet.Main remove xxx`
+
+**commit操作：**`java gitlet.Main commit "你的message"`
+
+**log操作：**`java gitlet.Main log`
+
+**status操作：**`java gitlet.Main status`
+
+**branch操作：**`java gitlet.Main branch "new branch的名称"`
+
+**check操作：**
+
+1. `java gitlet.Main checkout -- [file name]`
+2. `java gitlet.Main checkout [commit id] -- [file name]`
+3. `java gitlet.Main checkout [branch name]`
+
+
 
 ### Data
 

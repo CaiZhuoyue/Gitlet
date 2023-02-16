@@ -419,6 +419,7 @@ public class Repository implements Serializable {
      * 1.在staging area中删除这个文件
      * 2.在CWD中删除这个文件
      * 3.在stage文件对应的removedFiles里面加入这个文件(前提是在当前commit被追踪)
+     *
      * @param fileName
      */
     public void remove(String fileName) {
@@ -507,7 +508,7 @@ public class Repository implements Serializable {
      * Not staged for removal, but tracked in the current commit
      * and deleted from the working directory.
      */
-    public void showModifiedButNotStaged(){
+    public void showModifiedButNotStaged() {
 
     }
 
@@ -520,7 +521,7 @@ public class Repository implements Serializable {
      * Ignore any subdirectories that may have been introduced,
      * since Gitlet does not deal with them.
      */
-    public void showUntracked(){
+    public void showUntracked() {
         List<String> files = plainFilenamesIn(CWD);
 
     }

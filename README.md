@@ -7,7 +7,19 @@
 * final关键词表示赋值一次之后就不能改变，对于一些需要改动的map就不能用final关键词
 * 不需要给外界使用的函数就可以设置为private
 
-#### 使用方式：
+代码放github 简历附上自己id或直接给项目链接
+
+工业界git的实现，深入了解原理（git的重点优势是协同开发、不是本地保存）
+
+提merge request
+
+如果a和b文件冲突怎么办
+
+大厂测试实习可以放在work experience里面。
+
+project里面可以放你的java git; 预约管理; 打卡程序。具体顺序根据你实习岗位相关性。
+
+### 使用方式：
 
 首先`cd gitlet`,`javac *.java`,然后`cd ..`回到proj2的文件夹
 
@@ -30,8 +42,6 @@
 1. `java gitlet.Main checkout -- [file name]`
 2. `java gitlet.Main checkout [commit id] -- [file name]`
 3. `java gitlet.Main checkout [branch name]`
-
-
 
 ### Data
 
@@ -60,37 +70,37 @@
 
 * Instance variables:
 
-  * String currentBranchPath 表示目前在哪个分支，例:"master"
+    * String currentBranchPath 表示目前在哪个分支，例:"master"
 
-  * String currentCommit 表示当前commit的id
+    * String currentCommit 表示当前commit的id
 
 
 * Methods:
-  * consturctor
-  * init()
-  * add(文件名)
-  * remove(文件名)
-  * commit(msg)
-  * commit(msg和第二个parent)
-  * checkout的入口
-  * checkout branch
-  * checkout commitId -- fileName
-  * changeCommit(cid1, cid2) 被几个函数共用的核心逻辑
-  * branch(branchname) 生成一个新的branch
-  * removeBranch(branchname) 删除对应的branch文件
-  * hasBranch 
-  * getBranchHeads 根据对应的branch名字获得commitid
-  * find
-  * global log
-  * status 对应status
-  * showBranches,showRemoved,showStaged
-  * writeRefs() 把commitid写到branch对应的文件中 比如把"dihuwe838923"写到"refs/head/master"中
-  * writeBlobToFile 把某个blob对应的文件写到当前目录的fileName文件中
-  * hasUntracked 找到这个状态下的文件
-  * merge
-  * findCommonAncestor （这里逻辑还有问题，要按照图的方式）
-  * modeCode
-  * judgeCondition
+    * consturctor
+    * init()
+    * add(文件名)
+    * remove(文件名)
+    * commit(msg)
+    * commit(msg和第二个parent)
+    * checkout的入口
+    * checkout branch
+    * checkout commitId -- fileName
+    * changeCommit(cid1, cid2) 被几个函数共用的核心逻辑
+    * branch(branchname) 生成一个新的branch
+    * removeBranch(branchname) 删除对应的branch文件
+    * hasBranch
+    * getBranchHeads 根据对应的branch名字获得commitid
+    * find
+    * global log
+    * status 对应status
+    * showBranches,showRemoved,showStaged
+    * writeRefs() 把commitid写到branch对应的文件中 比如把"dihuwe838923"写到"refs/head/master"中
+    * writeBlobToFile 把某个blob对应的文件写到当前目录的fileName文件中
+    * hasUntracked 找到这个状态下的文件
+    * merge
+    * findCommonAncestor （这里逻辑还有问题，要按照图的方式）
+    * modeCode
+    * judgeCondition
 
 #### Blob
 
@@ -98,14 +108,11 @@
 
 * instance variables:
 
-  * String id (暂时没用)
+    * String id (暂时没用)
 
-  * bytes[] content 文件内容
+    * bytes[] content 文件内容
 
-  * String blobHash 文件名（哈希码）
-
-    
-
+    * String blobHash 文件名（哈希码）
 
 #### Stage
 
@@ -117,12 +124,9 @@ add添加一项或者更新一项到stage的map中，rm删除一项，同时移�
 
 * instance variables:
 
-  * TreeMap<String,String> fileToBlob add添加的文件名到blob名的映射
+    * TreeMap<String,String> fileToBlob add添加的文件名到blob名的映射
 
-  * TreeMap<String,String> removefileToBlob rm添加的文件名到blob的映射 其实可以只变成Set\<String>
-
-
-
+    * TreeMap<String,String> removefileToBlob rm添加的文件名到blob的映射 其实可以只变成Set\<String>
 
 #### Commit
 
@@ -130,19 +134,17 @@ add添加一项或者更新一项到stage的map中，rm删除一项，同时移�
 
 * instance variables:
 
-  * private final String message; // 提交的信息
+    * private final String message; // 提交的信息
 
-  * private final String timestamp; // 时间戳
+    * private final String timestamp; // 时间戳
 
-  * private final String parent;
+    * private final String parent;
 
-  * private final String parent2; 
+    * private final String parent2;
 
-  * private final String commitHash;
+    * private final String commitHash;
 
-  * private final TreeMap<String, String> fileToBlob; // 映射表
-
-    
+    * private final TreeMap<String, String> fileToBlob; // 映射表
 
 ### 实现各种功能
 
@@ -184,20 +186,28 @@ add添加一项或者更新一项到stage的map中，rm删除一项，同时移�
 * 如果存在就把currentBranchPath, currentCommit这些都切换为新的branch
 * 把新的branch指向的头commit的文件复制过来
 
+#### git对于working with remote的描述
+
+Remote repositories are versions of your project that are hosted on the Internet or network somewhere. You can have
+several of them, each of which generally is either read-only or read/write for you.
+
+这里的remote并不一定是在互联网或者是其他机器上，也可以是本地机器的不同文件夹。（反正是else where就可以）
+
 
 
 ### Extra credit
 
 实现git的几个remote操作
 
-To get extra credit, implement some basic remote commands: namely `add-remote`, `rm-remote`, `push`, `fetch`, and `pull` You will get 3 extra-credit points for completing them. Don't attempt or plan for extra credit until you have completed the rest of the project.
-
-
+To get extra credit, implement some basic remote commands: namely `add-remote`, `rm-remote`, `push`, `fetch`, and `pull`
+You will get 3 extra-credit points for completing them. Don't attempt or plan for extra credit until you have completed
+the rest of the project.
 
 A few notes about the remote commands:
 
 - Execution time will not be graded. For your own edification, please don’t do anything ridiculous, though.
-- All the commands are significantly simplified from their git equivalents, so specific differences from git are usually not notated. Be aware they are there, however.
+- All the commands are significantly simplified from their git equivalents, so specific differences from git are usually
+  not notated. Be aware they are there, however.
 
 So now let’s go over the commands:
 
@@ -205,14 +215,19 @@ So now let’s go over the commands:
 
 - **Usage**: `java gitlet.Main add-remote [remote name] [name of remote directory]/.gitlet`
 - **Description**: Saves the given login information under the given remote name. Attempts to push or pull from the given remote name will then attempt to use this `.gitlet` directory. By writing, e.g., java gitlet.Main add-remote other ../testing/otherdir/.gitlet you can provide tests of remotes that will work from all locations (on your home machine or within the grading program’s software). Always use forward slashes in these commands. Have your program convert all the forward slashes into the path separator character (forward slash on Unix and backslash on Windows). Java helpfully defines the class variable `java.io.File.separator` as this character.
-- **Failure cases**: If a remote with the given name already exists, print the error message: `A remote with that name already exists.` You don’t have to check if the user name and server information are legit.
+- Java helpfully defines the class variable `java.io.File.separator` as this character.
+- **Failure cases**: If a remote with the given name already exists, print the error
+  message: `A remote with that name already exists.` You don’t have to check if the user name and server information are
+  legit.
 - **Dangerous?**: No.
 
 #### rm-remote
 
 - **Usage**: `java gitlet.Main rm-remote [remote name]`
-- **Description**: Remove information associated with the given remote name. The idea here is that if you ever wanted to change a remote that you added, you would have to first remove it and then re-add it.
-- **Failure cases**: If a remote with the given name does not exist, print the error message: `A remote with that name does not exist.`
+- **Description**: Remove information associated with the given remote name. The idea here is that if you ever wanted to
+  change a remote that you added, you would have to first remove it and then re-add it.
+- **Failure cases**: If a remote with the given name does not exist, print the error
+  message: `A remote with that name does not exist.`
 - **Dangerous?**: No.
 
 #### push
@@ -227,23 +242,27 @@ So now let’s go over the commands:
 
 - **Failure cases**: If the remote branch’s head is not in the history of the current local head, print the error message `Please pull down remote changes before pushing.` If the remote `.gitlet` directory does not exist, print `Remote directory not found.`
 
-- **Dangerous?**: No.
-
 #### fetch
 
 - **Usage**: `java gitlet.Main fetch [remote name] [remote branch name]`
-- **Description**: Brings down commits from the remote Gitlet repository into the local Gitlet repository. Basically, this copies all commits and blobs from the given branch in the remote repository (that are not already in the current repository) into a branch named `[remote name]/[remote branch name]` in the local `.gitlet` (just as in real Git), changing `[remote name]/[remote branch name]` to point to the head commit (thus copying the contents of the branch from the remote repository to the current one). This branch is created in the local repository if it did not previously exist.
-- **Failure cases**: If the remote Gitlet repository does not have the given branch name, print the error message `That remote does not have that branch.` If the remote `.gitlet` directory does not exist, print `Remote directory not found.`
+- **Description**: Brings down commits from the remote Gitlet repository into the local Gitlet repository. Basically,
+  this copies all commits and blobs from the given branch in the remote repository (that are not already in the current
+  repository) into a branch named `[remote name]/[remote branch name]` in the local `.gitlet` (just as in real Git),
+  changing `[remote name]/[remote branch name]` to point to the head commit (thus copying the contents of the branch
+  from the remote repository to the current one). This branch is created in the local repository if it did not
+  previously exist.
+- **Failure cases**: If the remote Gitlet repository does not have the given branch name, print the error
+  message `That remote does not have that branch.` If the remote `.gitlet` directory does not exist,
+  print `Remote directory not found.`
 - **Dangerous?** No
 
 #### pull
 
 - **Usage**: `java gitlet.Main pull [remote name] [remote branch name]`
-- **Description**: Fetches branch `[remote name]/[remote branch name]` as for the `fetch` command, and then merges that fetch into the current branch.
+- **Description**: Fetches branch `[remote name]/[remote branch name]` as for the `fetch` command, and then merges that
+  fetch into the current branch.
 - **Failure cases**: Just the failure cases of `fetch` and `merge` together.
 - **Dangerous?** Yes!
-
-
 
 ### git merge
 
@@ -257,8 +276,6 @@ and stage the result.
 
 * A deleted file in a branch as an empty file.
 * Use straight concatenation here.
-
-
 
 |            |           | 祖先分支 | 当前分支        | 合并分支 | -表示啥都不做         |      |
 | ---------- | :-------- | -------- | --------------- | -------- | --------------------- | ---- |
@@ -279,10 +296,6 @@ and stage the result.
 
 有时候会显示no changes added to the commit...
 
-
-
-
-
 第二列：当前和祖先 合并和祖先 当前和合并
 
 |        |           | 祖先分支 | 当前分支        | 合并分支 | -表示啥都不做         |
@@ -302,12 +315,6 @@ and stage the result.
 | case 4 | 4 2 3     | -        | +               | -        | -                     |
 | case 5 | **2 4 4** | -        | -               | +        | 用合并分支的文件，add |
 
-
-
-
-
-
-
 merge的8个规则
 
 ![img](https://pic2.zhimg.com/80/v2-5b2470a6def367603e617ea9c709c231_1440w.webp)
@@ -316,11 +323,12 @@ merge的8个规则
 
 checkout新branch的东西
 
-These files should then all be automatically staged. 
+These files should then all be automatically staged.
 
 * “modified in the given branch since the split point”
 
-  this means the version of the file as it exists in the commit at the front of the given branch has different content from the version of the file at the split point. Remember: blobs are content addressable!
+  this means the version of the file as it exists in the commit at the front of the given branch has different content
+  from the version of the file at the split point. Remember: blobs are content addressable!
 
 **2.modified in `HEAD` but not `other`->`HEAD`,保持原样**
 
@@ -328,15 +336,18 @@ These files should then all be automatically staged.
 
 <u>Untracked的情况：</u>
 
-If a file was removed from both the current and given branch, but a file of the same name is present in the working directory, it is left alone and continues to be absent (not tracked nor staged) in the merge.
+If a file was removed from both the current and given branch, but a file of the same name is present in the working
+directory, it is left alone and continues to be absent (not tracked nor staged) in the merge.
 
 **8.在`HEAD`和`other`都修改了，但是修改方式不同**
 
 可能修改成不同的内容，或者一个改一个删...
 
-Any files modified in different ways in the current and given branches are *in conflict*. 
+Any files modified in different ways in the current and given branches are *in conflict*.
 
-“Modified in different ways” can mean that the contents of both are changed and different from other, or the contents of one are changed and the other file is deleted, or the file was absent at the split point and has different contents in the given and current branches. In this case, replace the contents of the conflicted file with
+“Modified in different ways” can mean that the contents of both are changed and different from other, or the contents of
+one are changed and the other file is deleted, or the file was absent at the split point and has different contents in
+the given and current branches. In this case, replace the contents of the conflicted file with
 
 **4.文件只在`HEAD`中有**，不用管
 

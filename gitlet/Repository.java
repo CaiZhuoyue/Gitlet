@@ -18,7 +18,8 @@ public class Repository implements Serializable {
     public static final File COMMITS_DIR = join(OBJECTS_DIR, "commits");
     public static final File BLOBS_DIR = join(OBJECTS_DIR, "blobs");
     public static final File HEAD_FILE = join(GITLET_DIR, "HEAD");
-    public static final File BRANCH_HEADS_DIR = join(GITLET_DIR, "heads");
+    public static final File REFS_DIR = join(GITLET_DIR, "refs");
+    public static final File BRANCH_HEADS_DIR = join(REFS_DIR, "heads");
     public static final File INDEX_FILE = join(GITLET_DIR, "index");
     String currentCommit; // 当前commit的对应SHA1
     String currentBranchPath; // "heads/master"
@@ -60,6 +61,9 @@ public class Repository implements Serializable {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
+        }
+        if (!REFS_DIR.exists()) {
+            REFS_DIR.mkdir();
         }
         if (!BRANCH_HEADS_DIR.exists()) {
             BRANCH_HEADS_DIR.mkdir();

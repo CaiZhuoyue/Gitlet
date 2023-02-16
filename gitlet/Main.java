@@ -1,10 +1,9 @@
 package gitlet;
 
-
 /**
  * Driver class for Gitlet, a subset of the Git version-control system.
  *
- * @author TODO
+ * @author Caizhuoyue
  */
 public class Main {
     public static void main(String[] args) {
@@ -21,6 +20,9 @@ public class Main {
             System.out.println("Not in an initialized Gitlet directory.");
             return;
         }
+        System.out.println(repo.currentBranch);
+        System.out.println(repo.currentBranchPath);
+
         switch (firstArg) {
             case "init":
                 repo.init();
@@ -67,6 +69,12 @@ public class Main {
                 break;
             case "merge":
                 repo.merge2(args[1]);
+                break;
+            case "remote-add":
+                repo.remoteAdd(args[1],args[2]);
+                break;
+            case "fetch":
+                repo.fetch("1","1",args[1]);
                 break;
             default:
                 System.out.println("No command with that name exists.");

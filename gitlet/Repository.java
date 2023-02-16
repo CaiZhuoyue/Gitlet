@@ -3,6 +3,7 @@ package gitlet;
 //import com.puppycrawl.tools.checkstyle.utils.ScopeUtil;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Files;
@@ -20,20 +21,116 @@ public class Repository implements Serializable {
     public static final File HEAD_FILE = join(GITLET_DIR, "HEAD");
     public static final File REFS_DIR = join(GITLET_DIR, "refs");
     public static final File BRANCH_HEADS_DIR = join(REFS_DIR, "heads");
+    public static final File REMOTE_HEADS_DIR = join(REFS_DIR, "remotes");
     public static final File INDEX_FILE = join(GITLET_DIR, "index");
     String currentCommit; // 当前commit的对应SHA1
-    String currentBranchPath; // "heads/master"
+    String currentBranchPath; // "refs/heads/master"
     String currentBranch; // "master"
     Stage currentStage;
 
     public Repository() {
         if (GITLET_DIR.exists()) {
             currentBranchPath = Utils.readContentsAsString(HEAD_FILE);
-            currentBranch = currentBranchPath.split("/")[1];
+            currentBranch = currentBranchPath.split("/")[2]; // refs/heads/master
             File f = join(GITLET_DIR, currentBranchPath);
             currentCommit = readContentsAsString(f);
             currentStage = Stage.fromFile();
         }
+    }
+
+    public void remoteAdd(String remoteName, String remoteUrl) {
+        System.out.println("remote add...");
+
+        File configFile = join(GITLET_DIR, "config");
+        String s = readContentsAsString(configFile);
+
+        if (s.contains("[remote " + remoteName + "]")) {
+            System.out.println("A remote with that name already exists.");
+            return;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append(s);
+        sb.append("[remote " + remoteName + "]\n\t");
+        sb.append("\turl = " + remoteUrl + "\n");
+        sb.append("\tfetch = +refs/heads/*:refs/remotes/" + remoteName + "/*\n");
+
+        writeContents(configFile, sb.toString());
+    }
+
+    public void remoteRemove(String remoteName) {
+        File configFile = join(GITLET_DIR, "config");
+        String s = readContentsAsString(configFile);
+        String nono = "[remote " + remoteName + "]";
+
+        if (!s.contains(nono)) {
+            System.out.println("A remote with that name does not exist.");
+        }
+        // 从config里面删除这一行
+
+        try {
+            Scanner scanner = new Scanner(configFile);
+
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+                if (line.contains(nono)) {
+                    for (int i = 0; i < 3; i++) { // 跳过这三行的内容
+                        scanner.nextLine();
+                    }
+                }
+                System.out.println(line);
+            }
+            scanner.close(); // close the scanner
+        } catch (FileNotFoundException ex) {
+            ex.printStackTrace();
+        }
+
+    }
+
+    public void fetch(String remoteName, String remoteBranch, String tempurl) {
+        // 先搬运一些配置文件
+        File remote = join(REMOTE_HEADS_DIR, remoteName);
+        // 还要判断一下是否存在，不存在又是新的做法
+
+        // 把remote url的东西给弄过来
+        String remoteUrl = tempurl;
+
+        if (remoteUrl.charAt(remoteUrl.length() - 1) != '/') {
+            remoteUrl += '/';
+        }
+
+        if (!REMOTE_HEADS_DIR.exists()) {
+            REMOTE_HEADS_DIR.mkdir();
+        }
+
+        // 获取remote的所有branch的头指针文件
+        remoteUrl = "/Users/caizy/Desktop/CS-self-learning/CS61B/重要Projects/Gitlet/proj2-gitlet/gitlet/dir/d1/.gitlet/refs/heads/";
+//        remoteUrl+="refs/heads/";
+        List<String> remoteHeads = plainFilenamesIn(remoteUrl);
+
+//        List<String> remoteHeads = plainFilenamesIn(remoteUrl + "refs/heads");
+
+        for (String head : remoteHeads) {
+//            File temp = join(remoteUrl, "refs/heads/" + head);
+            File temp = join(remoteUrl, head);
+            String content = readContentsAsString(temp);
+
+            System.out.println(head + ":" + content);
+
+            File output = join(REMOTE_HEADS_DIR, head);
+            writeContents(output, "1");
+        }
+
+        // 直接把文件复制过去
+        return;
+    }
+
+    public void push(String remoteName, String remoteBranch) {
+        return;
+    }
+
+    public void pull(String remoteName, String remoteBranch) {
+        return;
     }
 
     public boolean check(String command) {
@@ -77,7 +174,7 @@ public class Repository implements Serializable {
         // 生成初始的commit
         Commit commit = new Commit("initial commit", "", "");
         // HEAD文件里面存放这个初始commit的文件位置
-        Utils.writeContents(HEAD_FILE, "heads/master");
+        Utils.writeContents(HEAD_FILE, "refs/heads/master");
         // heads/master文件存放这个commit的SHA1
         writeRefs("master", commit.getHash());
         commit.saveCommit(); // 保存当前commit
@@ -179,7 +276,7 @@ public class Repository implements Serializable {
 
         changeCommit(currentCommit, commitID);
 
-        writeContents(HEAD_FILE, "heads/" + branch);
+        writeContents(HEAD_FILE, "refs/heads/" + branch);
     }
 
     /**

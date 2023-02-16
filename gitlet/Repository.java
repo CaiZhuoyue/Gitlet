@@ -11,35 +11,24 @@ import java.util.*;
 
 import static gitlet.Utils.*;
 
-/**
- * Represents a gitlet repository.
- * 每次想使用任何命令都通过repository来调用
- * does at a high level.
- *
- * @author caizhuoyue
- */
 public class Repository implements Serializable {
-    /**
-     * The current working directory.
-     */
     public static final File CWD = new File(System.getProperty("user.dir"));
     public static final File GITLET_DIR = join(CWD, ".gitlet");
     public static final File OBJECTS_DIR = join(GITLET_DIR, "objects");
     public static final File COMMITS_DIR = join(OBJECTS_DIR, "commits");
     public static final File BLOBS_DIR = join(OBJECTS_DIR, "blobs");
     public static final File HEAD_FILE = join(GITLET_DIR, "HEAD");
-    public static final File REFS_DIR = join(GITLET_DIR, "refs");
-    public static final File REFS_HEADS_DIR = join(REFS_DIR, "heads");
+    public static final File BRANCH_HEADS_DIR = join(GITLET_DIR, "heads");
     public static final File INDEX_FILE = join(GITLET_DIR, "index");
     String currentCommit; // 当前commit的对应SHA1
-    String currentBranchPath; // "refs/heads/master"
+    String currentBranchPath; // "heads/master"
     String currentBranch; // "master"
     Stage currentStage;
 
     public Repository() {
         if (GITLET_DIR.exists()) {
             currentBranchPath = Utils.readContentsAsString(HEAD_FILE);
-            currentBranch = currentBranchPath.split("/")[2];
+            currentBranch = currentBranchPath.split("/")[1];
             File f = join(GITLET_DIR, currentBranchPath);
             currentCommit = readContentsAsString(f);
             currentStage = Stage.fromFile();
@@ -72,11 +61,8 @@ public class Repository implements Serializable {
                 throw new RuntimeException(e);
             }
         }
-        if (!REFS_DIR.exists()) {
-            REFS_DIR.mkdir();
-        }
-        if (!REFS_HEADS_DIR.exists()) {
-            REFS_HEADS_DIR.mkdir();
+        if (!BRANCH_HEADS_DIR.exists()) {
+            BRANCH_HEADS_DIR.mkdir();
         }
         if (!COMMITS_DIR.exists()) {
             COMMITS_DIR.mkdir();
@@ -87,16 +73,15 @@ public class Repository implements Serializable {
         // 生成初始的commit
         Commit commit = new Commit("initial commit", "", "");
         // HEAD文件里面存放这个初始commit的文件位置
-        Utils.writeContents(HEAD_FILE, "refs/heads/master");
-        // refs/heads/master文件存放这个commit的SHA1
+        Utils.writeContents(HEAD_FILE, "heads/master");
+        // heads/master文件存放这个commit的SHA1
         writeRefs("master", commit.getHash());
         commit.saveCommit(); // 保存当前commit
         Stage.cleanStage();
     }
 
     public void writeRefs(String branch, String commitID) {
-        writeContents(join(REFS_HEADS_DIR, branch), commitID);
-        return;
+        writeContents(join(BRANCH_HEADS_DIR, branch), commitID);
     }
 
     /**
@@ -117,7 +102,6 @@ public class Repository implements Serializable {
      * 按照字典序输出所有的commit信息
      */
     public void globalLog() {
-// 遍历所有的commit
         List<String> commits = plainFilenamesIn(COMMITS_DIR);
         for (String id : commits) {
             System.out.println(readObject(join(COMMITS_DIR, id), Commit.class));
@@ -187,12 +171,11 @@ public class Repository implements Serializable {
             System.out.println("No such branch exists.");
             return; // 没有这个branch
         }
-
         String commitID = getBranchHead(branch); // new branch的HEAD指向的commitid
 
         changeCommit(currentCommit, commitID);
 
-        writeContents(HEAD_FILE, "refs/heads/" + branch);
+        writeContents(HEAD_FILE, "heads/" + branch);
     }
 
     /**
@@ -235,12 +218,12 @@ public class Repository implements Serializable {
      * @return
      */
     public String getBranchHead(String branch) {
-        File file = join(REFS_HEADS_DIR, branch);
+        File file = join(BRANCH_HEADS_DIR, branch);
         return readContentsAsString(file);
     }
 
     public boolean hasBranch(String branch) {
-        File file = join(REFS_HEADS_DIR, branch);
+        File file = join(BRANCH_HEADS_DIR, branch);
         return file.exists();
     }
 
@@ -320,11 +303,6 @@ public class Repository implements Serializable {
         return false;
     }
 
-    public void writeFileFromCommit(String fileName, String cid) {
-        Commit c = Commit.fromFile(cid);
-
-    }
-
     /**
      * 移除一个branch
      *
@@ -339,7 +317,7 @@ public class Repository implements Serializable {
             System.out.println("A branch with that name does not exist.");
             return; // 没有这个branch
         }
-        File file = join(REFS_HEADS_DIR, branch);
+        File file = join(BRANCH_HEADS_DIR, branch);
         file.delete();
     }
 
@@ -386,7 +364,7 @@ public class Repository implements Serializable {
      * @param branch
      */
     public void branch(String branch) { // 新建一个分支
-        File file = join(REFS_HEADS_DIR, branch);
+        File file = join(BRANCH_HEADS_DIR, branch);
         if (file.exists()) { // 已经存在这个分支
             System.out.println("A branch with that name already exists.");
             return;
@@ -425,7 +403,7 @@ public class Repository implements Serializable {
         Blob b;
 
         try {
-            b = new Blob(fileName, blobHash, Files.readAllBytes(Path.of(fileName)));
+            b = new Blob(blobHash, Files.readAllBytes(Path.of(fileName)));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -441,7 +419,6 @@ public class Repository implements Serializable {
      * 1.在staging area中删除这个文件
      * 2.在CWD中删除这个文件
      * 3.在stage文件对应的removedFiles里面加入这个文件(前提是在当前commit被追踪)
-     *
      * @param fileName
      */
     public void remove(String fileName) {
@@ -453,9 +430,7 @@ public class Repository implements Serializable {
             System.out.println("No reason to remove the file.");
             return;
         }
-
         currentStage.removeAdd(fileName); // 如果添加到了暂存区 从暂存区删掉
-
 // 如果上一个commit中追踪了这个文件，就添加到removed列表
         if (commit.hasFile(fileName)) {
             currentStage.addRm(fileName);
@@ -463,7 +438,6 @@ public class Repository implements Serializable {
             File file = join(CWD, fileName);
             restrictedDelete(file);
         }
-
         currentStage.saveStage();
     }
 
@@ -489,7 +463,7 @@ public class Repository implements Serializable {
     public void showBranches() {
         System.out.println("=== Branches ===");
 
-        String[] branches = REFS_HEADS_DIR.list();
+        String[] branches = BRANCH_HEADS_DIR.list();
 
         Arrays.sort(branches);
 
@@ -525,11 +499,30 @@ public class Repository implements Serializable {
         }
     }
 
-    public boolean check() {
-        if (!GITLET_DIR.exists()) {
-            System.out.println("Not in an initialized Gitlet directory.");
-        }
-        return GITLET_DIR.exists();
+    /**
+     * “modified but not staged”
+     * Tracked in the current commit, changed in the cwd, but not staged;
+     * Staged for addition, but with different contents than in cwd;
+     * Staged for addition, but deleted in cwd;
+     * Not staged for removal, but tracked in the current commit
+     * and deleted from the working directory.
+     */
+    public void showModifiedButNotStaged(){
+
+    }
+
+    /**
+     * “Untracked Files”
+     * files present in the working directory but
+     * neither staged for addition nor tracked.
+     * This includes files that have been staged for removal,
+     * but then re-created without Gitlet’s knowledge.
+     * Ignore any subdirectories that may have been introduced,
+     * since Gitlet does not deal with them.
+     */
+    public void showUntracked(){
+        List<String> files = plainFilenamesIn(CWD);
+
     }
 
     /**

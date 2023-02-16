@@ -22,20 +22,24 @@ public class Commit implements Serializable {
     // 表示这个commit的父母的地址
     private final TreeMap<String, String> fileToBlob;
 
-    public Commit(String msg, String p, String q) {
+    public Commit(String msg, String parentID, String parent2ID) {
         fileToBlob = new TreeMap<>();
 
-        if (!p.equals("")) {
-            // 复制parent commit中的东西
-            File file = join(COMMITS_DIR, p);
-            Commit lastCommit = readObject(file, Commit.class);
-            add(lastCommit.getFileToBlob());
+        if (!parentID.equals("")) { // 不是initial commit
+            Commit lastCommit = Commit.fromFile(parentID);
+            add(lastCommit.getFileToBlob()); // 复制parent commit中的东西
         }
         message = msg;
-        parent = p;
-        parent2 = q;
+        parent = parentID;
+        parent2 = parent2ID;
         timestamp = getTimeStamp();
         commitHash = generateHash();
+    }
+
+    public static Commit fromFile(String commitName) {
+        File file = join(COMMITS_DIR, commitName);
+        Commit commit = readObject(file, Commit.class);
+        return commit;
     }
 
     public void add(TreeMap<String, String> ftb) {
@@ -65,28 +69,6 @@ public class Commit implements Serializable {
 
     public void add(String fileName, String blob) {
         fileToBlob.put(fileName, blob);
-    }
-
-    public Commit(String msg, String p) {
-        fileToBlob = new TreeMap<>();
-
-        if (!p.equals("")) {
-            // 复制parent commit中的东西
-            File file = join(COMMITS_DIR, p);
-            Commit lastCommit = readObject(file, Commit.class);
-            add(lastCommit.getFileToBlob());
-        }
-        message = msg;
-        parent = p;
-        parent2 = "";
-        timestamp = getTimeStamp();
-        commitHash = generateHash();
-    }
-
-    public static Commit fromFile(String commitName) {
-        File file = join(COMMITS_DIR, commitName);
-        Commit commit = readObject(file, Commit.class);
-        return commit;
     }
 
     public String getHash() {

@@ -226,6 +226,11 @@ public class Repository implements Serializable {
             }
             File remoteHeadFile = join(url, "refs/heads/", remoteBranch);
             writeContents(remoteHeadFile, currentHead);
+            // 然后根据那个commit把文件都弄进去
+            // 根据commit的状态和文件夹的状态
+
+            // 有点难啊。。。。
+
         }
 
         System.out.println("git push finished"); // 把所有新的commit以及新的blob都复制过去
@@ -236,7 +241,6 @@ public class Repository implements Serializable {
     public String getRemoteBranchHead(String url, String remoteBranch) {
         File f = join(url, "refs/heads", remoteBranch);
         if (!f.exists()) {
-//            System.out.println("file " + f.toString() + " does not exist");
             return "";
         } else {
             return readContentsAsString(f);

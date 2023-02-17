@@ -13,6 +13,7 @@ import java.util.*;
 import static gitlet.Utils.*;
 
 public class Repository implements Serializable {
+    public File remoteCWD = null;
     public static final File CWD = new File(System.getProperty("user.dir"));
     public static final File GITLET_DIR = join(CWD, ".gitlet");
     public static final File OBJECTS_DIR = join(GITLET_DIR, "objects");
@@ -231,6 +232,8 @@ public class Repository implements Serializable {
 
             // 有点难啊。。。。
 
+
+
         }
 
         System.out.println("git push finished"); // 把所有新的commit以及新的blob都复制过去
@@ -263,7 +266,7 @@ public class Repository implements Serializable {
         Commit commit1 = Commit.fromFile(curHead);
         String parent1;
 
-        for (int i = 0; i < length-1; i++) {
+        for (int i = 0; i < length - 1; i++) {
             if (commit1.getHash().equals(remoteHead)) {
                 break;
             } else {

@@ -1,5 +1,6 @@
 package gitlet;
 
+import java.io.File;
 import java.io.Serializable;
 
 import static gitlet.Repository.BLOBS_DIR;
@@ -19,14 +20,20 @@ public class Blob implements Serializable {
         return blob.getContent();
     }
 
-    public String getContent() {
-        String s = new String(content);
-        return s;
-    }
-
     public static Blob fromFile(String blobName) {
         Blob blob = readObject(join(BLOBS_DIR, blobName), Blob.class);
         return blob;
+    }
+
+    public static Blob fromRemoteFile(String url, String blobName) {
+        File temp = join(url, "objects/blobs");
+        Blob blob = readObject(join(temp, blobName), Blob.class);
+        return blob;
+    }
+
+    public String getContent() {
+        String s = new String(content);
+        return s;
     }
 
     public void saveBlob() {

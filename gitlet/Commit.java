@@ -42,6 +42,12 @@ public class Commit implements Serializable {
         return commit;
     }
 
+    public static Commit fromRemoteFile(String url, String commitName) {
+        File temp = join(url, "objects/commits", commitName);
+        Commit commit = readObject(temp, Commit.class);
+        return commit;
+    }
+
     public void add(TreeMap<String, String> ftb) {
         for (String fileName : ftb.keySet()) {
             add(fileName, ftb.get(fileName));

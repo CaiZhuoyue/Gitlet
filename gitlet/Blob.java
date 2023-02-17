@@ -3,7 +3,6 @@ package gitlet;
 import java.io.File;
 import java.io.Serializable;
 
-import static gitlet.Repository.BLOBS_DIR;
 import static gitlet.Utils.*;
 
 public class Blob implements Serializable {
@@ -15,13 +14,13 @@ public class Blob implements Serializable {
         this.content = content;
     }
 
-    public static String getContentFromFile(String blobName) {
-        Blob blob = readObject(join(BLOBS_DIR, blobName), Blob.class);
+    public static String getContentFromFile(File blobsDir, String blobName) {
+        Blob blob = readObject(join(blobsDir, blobName), Blob.class);
         return blob.getContent();
     }
 
-    public static Blob fromFile(String blobName) {
-        Blob blob = readObject(join(BLOBS_DIR, blobName), Blob.class);
+    public static Blob fromFile(File blobsDir, String blobName) {
+        Blob blob = readObject(join(blobsDir, blobName), Blob.class);
         return blob;
     }
 
@@ -36,7 +35,7 @@ public class Blob implements Serializable {
         return s;
     }
 
-    public void saveBlob() {
-        writeObject(join(BLOBS_DIR, blobHash), this); // 当前commit写到文件中
+    public void saveBlob(File blobsDir) {
+        writeObject(join(blobsDir, blobHash), this); // 当前commit写到文件中
     }
 }

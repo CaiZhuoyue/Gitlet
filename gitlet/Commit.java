@@ -9,7 +9,6 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.TreeMap;
 
-import static gitlet.Repository.COMMITS_DIR;
 import static gitlet.Utils.*;
 
 public class Commit implements Serializable {
@@ -22,11 +21,11 @@ public class Commit implements Serializable {
     // 表示这个commit的父母的地址
     private final TreeMap<String, String> fileToBlob;
 
-    public Commit(String msg, String parentID, String parent2ID) {
+    public Commit(File commitsDir, String msg, String parentID, String parent2ID) {
         fileToBlob = new TreeMap<>();
 
         if (!parentID.equals("")) { // 不是initial commit
-            Commit lastCommit = Commit.fromFile(parentID);
+            Commit lastCommit = Commit.fromFile(commitsDir, parentID);
             add(lastCommit.getFileToBlob()); // 复制parent commit中的东西
         }
         message = msg;
@@ -36,8 +35,8 @@ public class Commit implements Serializable {
         commitHash = generateHash();
     }
 
-    public static Commit fromFile(String commitName) {
-        File file = join(COMMITS_DIR, commitName);
+    public static Commit fromFile(File commitsDir, String commitName) {
+        File file = join(commitsDir, commitName);
         Commit commit = readObject(file, Commit.class);
         return commit;
     }
@@ -91,8 +90,8 @@ public class Commit implements Serializable {
         fileToBlob.remove(fileName);
     }
 
-    public void saveCommit() {
-        writeObject(join(COMMITS_DIR, commitHash), this);
+    public void saveCommit(File commitsDir) {
+        writeObject(join(commitsDir, commitHash), this);
     }
 
     public String toString() {

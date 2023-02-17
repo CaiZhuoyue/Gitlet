@@ -13,28 +13,44 @@ import java.util.*;
 import static gitlet.Utils.*;
 
 public class Repository implements Serializable {
-    public static final File CWD = new File(System.getProperty("user.dir"));
-    public static final File GITLET_DIR = join(CWD, ".gitlet");
-    public static final File OBJECTS_DIR = join(GITLET_DIR, "objects");
-    public static final File COMMITS_DIR = join(OBJECTS_DIR, "commits");
-    public static final File BLOBS_DIR = join(OBJECTS_DIR, "blobs");
-    public static final File HEAD_FILE = join(GITLET_DIR, "HEAD");
-    public static final File REFS_DIR = join(GITLET_DIR, "refs");
-    public static final File BRANCH_HEADS_DIR = join(REFS_DIR, "heads");
-    public static final File REMOTE_HEADS_DIR = join(REFS_DIR, "remotes");
-    public static final File INDEX_FILE = join(GITLET_DIR, "index");
+    private static File CWD;
+    private static File GITLET_DIR;
+    private static File OBJECTS_DIR;
+    private static File COMMITS_DIR;
+    private static File BLOBS_DIR;
+    private static File HEAD_FILE;
+    private static File REFS_DIR;
+    private static File BRANCH_HEADS_DIR;
+    private static File REMOTE_HEADS_DIR;
+    private static File INDEX_FILE;
     String currentCommit; // 当前commit的对应SHA1
     String currentBranchPath; // "refs/heads/master"
     String currentBranch; // "master"
     Stage currentStage;
 
     public Repository() {
+        this(System.getProperty("user.dir"));
+    }
+
+    public Repository(String directory) {
+        // 支持remote版本的构造函数
+        CWD = new File(directory);
+        GITLET_DIR = join(CWD, ".gitlet");
+        OBJECTS_DIR = join(GITLET_DIR, "objects");
+        COMMITS_DIR = join(OBJECTS_DIR, "commits");
+        BLOBS_DIR = join(OBJECTS_DIR, "blobs");
+        HEAD_FILE = join(GITLET_DIR, "HEAD");
+        REFS_DIR = join(GITLET_DIR, "refs");
+        BRANCH_HEADS_DIR = join(REFS_DIR, "heads");
+        REMOTE_HEADS_DIR = join(REFS_DIR, "remotes");
+        INDEX_FILE = join(GITLET_DIR, "index");
+
         if (GITLET_DIR.exists()) {
             currentBranchPath = Utils.readContentsAsString(HEAD_FILE);
             currentBranch = currentBranchPath.split("/")[2]; // refs/heads/master
             File f = join(GITLET_DIR, currentBranchPath);
             currentCommit = readContentsAsString(f);
-            currentStage = Stage.fromFile();
+            currentStage = Stage.fromFile(INDEX_FILE);
         }
     }
 
@@ -257,7 +273,7 @@ public class Repository implements Serializable {
 
         int length = commitLength(curHead);
 
-        Commit commit1 = Commit.fromFile(curHead);
+        Commit commit1 = Commit.fromFile(COMMITS_DIR, curHead);
         String parent1;
 
         for (int i = 0; i < length - 1; i++) {
@@ -268,7 +284,7 @@ public class Repository implements Serializable {
                 futureCommits.add(commit1.getHash());
             }
             parent1 = commit1.getParent();
-            commit1 = Commit.fromFile(parent1);
+            commit1 = Commit.fromFile(COMMITS_DIR, parent1);
         }
         return futureCommits;
     }
@@ -319,13 +335,13 @@ public class Repository implements Serializable {
             BLOBS_DIR.mkdir();
         }
 // 生成初始的commit
-        Commit commit = new Commit("initial commit", "", "");
+        Commit commit = new Commit(COMMITS_DIR, "initial commit", "", "");
 // HEAD文件里面存放这个初始commit的文件位置
         Utils.writeContents(HEAD_FILE, "refs/heads/master");
 // heads/master文件存放这个commit的SHA1
         writeRefs("master", commit.getHash());
-        commit.saveCommit(); // 保存当前commit
-        Stage.cleanStage();
+        commit.saveCommit(COMMITS_DIR); // 保存当前commit
+        Stage.cleanStage(INDEX_FILE);
     }
 
     public void writeRefs(String branch, String commitID) {
@@ -336,11 +352,12 @@ public class Repository implements Serializable {
      * 输出当前commit和所有的parent commit
      */
     public void log() {
-        Commit commit = Commit.fromFile(currentCommit);
+        Commit commit = Commit.fromFile(COMMITS_DIR, currentCommit);
+
         System.out.println(commit);
         String curCommit = commit.getParent();
         while (!curCommit.equals("")) {
-            commit = Commit.fromFile(curCommit);
+            commit = Commit.fromFile(COMMITS_DIR, curCommit);
             System.out.println(commit);
             curCommit = commit.getParent();
         }
@@ -450,7 +467,7 @@ public class Repository implements Serializable {
             return;
         }
 
-        Commit commit = Commit.fromFile(commitID);
+        Commit commit = Commit.fromFile(COMMITS_DIR, commitID);
 
         if (!commit.hasFile(fileName)) { // 没有这个文件
             System.out.println("File does not exist in that commit.");
@@ -483,8 +500,8 @@ public class Repository implements Serializable {
      * @param commitID2
      */
     public void changeCommit(String commitID1, String commitID2) {
-        Commit commit1 = Commit.fromFile(commitID1);
-        Commit commit2 = Commit.fromFile(commitID2);
+        Commit commit1 = Commit.fromFile(COMMITS_DIR, commitID1);
+        Commit commit2 = Commit.fromFile(COMMITS_DIR, commitID2);
 
 // 在另一个分支中有这个文件，在这个分支中被修改了但是没有add也没有commit
 // 在当前working directory是否有修改（是否和上个commit不同）
@@ -514,7 +531,7 @@ public class Repository implements Serializable {
                 writeBlobToFile(fileName, commit2.getBlob(fileName));
             }
         }
-        Stage.cleanStage();
+        Stage.cleanStage(INDEX_FILE);
     }
 
     public void changeRemoteCommit(String url, String commitID1, String commitID2) {
@@ -572,7 +589,7 @@ return;
     public void writeBlobToFile(String fileName, String blobHash) {
         File f = join(CWD, fileName);
 
-        writeContents(f, Blob.getContentFromFile(blobHash));
+        writeContents(f, Blob.getContentFromFile(BLOBS_DIR, blobHash));
     }
 
     /**
@@ -584,7 +601,7 @@ return;
      * @return
      */
     public Set<String> getUntrackedFiles() {
-        Commit c = Commit.fromFile(currentCommit);
+        Commit c = Commit.fromFile(COMMITS_DIR, currentCommit);
         List<String> curFiles = plainFilenamesIn(CWD);
         Set<String> files = new TreeSet<>();
 
@@ -610,13 +627,13 @@ return;
     public Set<String> getModifiedFiles() {
         Set<String> files = new HashSet<>();
         List<String> curFiles = plainFilenamesIn(CWD);
-        Commit c = Commit.fromFile(currentCommit);
+        Commit c = Commit.fromFile(COMMITS_DIR, currentCommit);
         Set<String> trackedFiles = c.getFiles();
 
         for (String file : curFiles) {
             if (!currentStage.hasFile(file)) { // case 1:
                 if (c.hasFile(file)) {
-                    Blob b = Blob.fromFile(c.getBlob(file));
+                    Blob b = Blob.fromFile(BLOBS_DIR, c.getBlob(file));
                     String content1 = readContentsAsString(join(CWD, file));
                     if (!content1.equals(b.getContent())) {
                         files.add(file + " (modified)");
@@ -624,7 +641,7 @@ return;
                 }
             } else { // case 2:
                 String content1 = readContentsAsString(join(CWD, file));
-                Blob b = Blob.fromFile(currentStage.getBlob(file));
+                Blob b = Blob.fromFile(BLOBS_DIR, currentStage.getBlob(file));
                 if (!content1.equals(b.getContent())) {
                     files.add(file + " (modified)");
                 }
@@ -651,12 +668,12 @@ return;
 
     public void writeBlobToRemoteFile(String url, String fileName, String blobHash) {
         File f = join(url, fileName);
-        writeContents(f, Blob.getContentFromFile(blobHash));
+        writeContents(f, Blob.getContentFromFile(BLOBS_DIR, blobHash));
     }
 
     private boolean hasUntracked(String cid1, String cid2) {
-        Commit c1 = Commit.fromFile(cid1);
-        Commit c2 = Commit.fromFile(cid2);
+        Commit c1 = Commit.fromFile(COMMITS_DIR, cid1);
+        Commit c2 = Commit.fromFile(COMMITS_DIR, cid2);
         List<String> files = plainFilenamesIn(CWD);
 
         for (String f : c2.getFiles()) {
@@ -721,14 +738,14 @@ return;
             System.out.println("No changes added to the commit.");
             return;
         }
-        Commit commit = new Commit(message, currentCommit, parent2);
+        Commit commit = new Commit(COMMITS_DIR, message, currentCommit, parent2);
         commit.add(currentStage.getFileToBlob()); // 把stage里面的blob都加进去
         commit.remove(currentStage.getRemovedFiles()); // 把要remove的blob都remove
         String newCommit = commit.getHash();
-        commit.saveCommit();
+        commit.saveCommit(COMMITS_DIR);
 
         writeRefs(currentBranch, newCommit); // 头指针移动到当前commit
-        Stage.cleanStage();
+        Stage.cleanStage(INDEX_FILE);
     }
 
     /**
@@ -760,7 +777,7 @@ return;
             return;
         }
 
-        Commit c = Commit.fromFile(currentCommit);
+        Commit c = Commit.fromFile(COMMITS_DIR, currentCommit);
         String blob = sha1(readContents(file)); // 存放文件内容
         if (c.hasFile(fileName) && c.getBlob(fileName).equals(blob)) {
             if (currentStage.empty()) {
@@ -768,7 +785,7 @@ return;
             }
             currentStage.removeAdd(fileName); // 移走关于这个fileName的add项
             currentStage.removeRm(fileName); // 移走关于这个fileName的remove项
-            currentStage.saveStage();
+            currentStage.saveStage(INDEX_FILE);
             return;
         }
 
@@ -780,11 +797,11 @@ return;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        b.saveBlob();
+        b.saveBlob(BLOBS_DIR);
 
 // 在stage里面加入当前文件和blob名的对应
         currentStage.add(fileName, blobHash);
-        currentStage.saveStage();
+        currentStage.saveStage(INDEX_FILE);
     }
 
     /**
@@ -797,7 +814,7 @@ return;
      */
     public void remove(String fileName) {
 // 判断这个文件是否在当前文件中被跟踪
-        Commit commit = Commit.fromFile(currentCommit);
+        Commit commit = Commit.fromFile(COMMITS_DIR, currentCommit);
 
         if (!commit.hasFile(fileName) && !currentStage.hasFile(fileName)) {
 // stage中没有加入该文件，在之前的commit中也没有这个文件
@@ -812,7 +829,7 @@ return;
             File file = join(CWD, fileName);
             restrictedDelete(file);
         }
-        currentStage.saveStage();
+        currentStage.saveStage(INDEX_FILE);
     }
 
     /**
@@ -917,8 +934,8 @@ return;
         int length1 = commitLength(commitID1);
         int length2 = commitLength(commitID2);
 
-        Commit commit1 = Commit.fromFile(commitID1);
-        Commit commit2 = Commit.fromFile(commitID2);
+        Commit commit1 = Commit.fromFile(COMMITS_DIR, commitID1);
+        Commit commit2 = Commit.fromFile(COMMITS_DIR, commitID2);
 
 // 处理两个parent的情况
         if (!commit1.getParent2().equals("")) {
@@ -936,12 +953,12 @@ return;
 
         for (int i = 0; i < Math.abs(length1 - length2); i++) {
             parent1 = commit1.getParent();
-            commit1 = Commit.fromFile(parent1);
+            commit1 = Commit.fromFile(COMMITS_DIR, parent1);
         }
 
         while (!commit1.getHash().equals(commit2.getHash())) {
-            commit1 = Commit.fromFile(commit1.getParent());
-            commit2 = Commit.fromFile(commit2.getParent());
+            commit1 = Commit.fromFile(COMMITS_DIR, commit1.getParent());
+            commit2 = Commit.fromFile(COMMITS_DIR, commit2.getParent());
         }
 
         return commit1.getHash();
@@ -954,11 +971,11 @@ return;
      */
     public int commitLength(String commitID) {
         int length = 0;
-        Commit commit = Commit.fromFile(commitID);
+        Commit commit = Commit.fromFile(COMMITS_DIR, commitID);
         String curCommit = commit.getParent();
         length++;
         while (!curCommit.equals("")) {
-            commit = Commit.fromFile(curCommit);
+            commit = Commit.fromFile(COMMITS_DIR, curCommit);
             curCommit = commit.getParent();
             length++;
         }
@@ -974,8 +991,8 @@ return;
      * 4表示在commit2存在 在commit1中不存在
      */
     public int modCode(String cid1, String cid2, String fileName) {
-        Commit c1 = Commit.fromFile(cid1);
-        Commit c2 = Commit.fromFile(cid2);
+        Commit c1 = Commit.fromFile(COMMITS_DIR, cid1);
+        Commit c2 = Commit.fromFile(COMMITS_DIR, cid2);
         boolean h1 = c1.hasFile(fileName);
         boolean h2 = c2.hasFile(fileName);
         if (!h1 && !h2) {
@@ -1105,9 +1122,9 @@ return;
     }
 
     private Set<String> getAllFiles(String cid, String bid, String sid) {
-        Commit bCommit = Commit.fromFile(bid);
-        Commit cCommit = Commit.fromFile(cid);
-        Commit sCommit = Commit.fromFile(sid);
+        Commit bCommit = Commit.fromFile(COMMITS_DIR, bid);
+        Commit cCommit = Commit.fromFile(COMMITS_DIR, cid);
+        Commit sCommit = Commit.fromFile(COMMITS_DIR, sid);
         Set<String> bFiles = bCommit.getFiles();
         Set<String> cFiles = cCommit.getFiles();
         Set<String> sFiles = sCommit.getFiles();
@@ -1119,8 +1136,8 @@ return;
     }
 
     private void writeConflictFile(String cid1, String cid2, String fileName) {
-        Commit c1 = Commit.fromFile(cid1);
-        Commit c2 = Commit.fromFile(cid2);
+        Commit c1 = Commit.fromFile(COMMITS_DIR, cid1);
+        Commit c2 = Commit.fromFile(COMMITS_DIR, cid2);
         String blob1 = "";
         String blob2 = "";
         if (c1.hasFile(fileName)) {
@@ -1132,13 +1149,13 @@ return;
 
         String res = "<<<<<<< HEAD\n";
         if (!blob1.equals("")) {
-            res += Blob.fromFile(blob1).getContent();
+            res += Blob.fromFile(BLOBS_DIR, blob1).getContent();
         }
         res += "=======\n";
 
 
         if (!blob2.equals("")) {
-            res += Blob.fromFile(blob2).getContent();
+            res += Blob.fromFile(BLOBS_DIR, blob2).getContent();
         }
         res += ">>>>>>>\n";
 
@@ -1147,7 +1164,7 @@ return;
     }
 
     private void writeCommitToFile(String cid, String fileName) {
-        Commit c = Commit.fromFile(cid);
+        Commit c = Commit.fromFile(COMMITS_DIR, cid);
         writeBlobToFile(fileName, c.getBlob(fileName));
     }
 

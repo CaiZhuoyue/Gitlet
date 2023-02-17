@@ -6,7 +6,6 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.TreeMap;
 
-import static gitlet.Repository.INDEX_FILE;
 import static gitlet.Utils.join;
 import static gitlet.Utils.readObject;
 
@@ -19,13 +18,13 @@ public class Stage implements Serializable {
         removedFileToBlob = new HashSet<>();
     }
 
-    public static Stage fromFile() {
-        return readObject(INDEX_FILE, Stage.class);
+    public static Stage fromFile(File indexFile) {
+        return readObject(indexFile, Stage.class);
     }
 
-    public static void cleanStage() {
+    public static void cleanStage(File indexFile) {
         Stage stage = new Stage();
-        stage.saveStage();
+        stage.saveStage(indexFile);
     }
 
     public static void cleanRemoteStage(String url) {
@@ -37,8 +36,8 @@ public class Stage implements Serializable {
         return fileToBlob.get(fileName);
     }
 
-    public void saveStage() {
-        Utils.writeObject(INDEX_FILE, this);
+    public void saveStage(File indexFile) {
+        Utils.writeObject(indexFile, this);
     }
 
     public void saveRemoteStage(String url) {

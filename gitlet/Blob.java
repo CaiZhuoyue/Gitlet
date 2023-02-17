@@ -26,7 +26,7 @@ public class Blob implements Serializable {
     }
 
     public static Blob fromRemoteFile(String url, String blobName) {
-        File temp = join(url, "objects/blobs");
+        File temp = join(url, ".gitlet/objects/blobs");
         Blob blob = readObject(join(temp, blobName), Blob.class);
         return blob;
     }

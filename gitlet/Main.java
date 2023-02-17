@@ -20,7 +20,6 @@ public class Main {
             System.out.println("Not in an initialized Gitlet directory.");
             return;
         }
-        System.out.println("currently at " + repo.currentCommit);
 
         switch (firstArg) {
             case "init":
@@ -69,14 +68,17 @@ public class Main {
             case "merge":
                 repo.merge2(args[1]);
                 break;
-            case "remote-add":
+            case "add-remote":
                 repo.remoteAdd(args[1], args[2]);
                 break;
-            case "remote-remove":
+            case "remove-remote":
                 repo.remoteRemove(args[1]);
                 break;
             case "fetch":
                 repo.fetch(args[1], args[2]);
+                break;
+            case "push":
+                repo.push(args[1], args[2]);
                 break;
             default:
                 System.out.println("No command with that name exists.");

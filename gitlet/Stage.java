@@ -1,9 +1,13 @@
 package gitlet;
 
+import java.io.File;
 import java.io.Serializable;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.TreeMap;
 
 import static gitlet.Repository.INDEX_FILE;
+import static gitlet.Utils.join;
 import static gitlet.Utils.readObject;
 
 public class Stage implements Serializable {
@@ -24,8 +28,22 @@ public class Stage implements Serializable {
         stage.saveStage();
     }
 
+    public static void cleanRemoteStage(String url) {
+        Stage stage = new Stage();
+        stage.saveRemoteStage(url);
+    }
+
+    public String getBlob(String fileName) {
+        return fileToBlob.get(fileName);
+    }
+
     public void saveStage() {
         Utils.writeObject(INDEX_FILE, this);
+    }
+
+    public void saveRemoteStage(String url) {
+        File temp = join(url, ".gitlet/index");
+        Utils.writeObject(temp, this);
     }
 
     public void add(String fileName, String hash) {
@@ -44,7 +62,11 @@ public class Stage implements Serializable {
         return fileToBlob.containsKey(fileName);
     }
 
-    public Set<String> getRemovedFileToBlob() {
+    public boolean hasRemoved(String fileName) {
+        return removedFileToBlob.contains(fileName);
+    }
+
+    public Set<String> getRemovedFiles() {
         return removedFileToBlob;
     }
 
@@ -62,5 +84,9 @@ public class Stage implements Serializable {
 
     public TreeMap<String, String> getFileToBlob() {
         return fileToBlob;
+    }
+
+    public Set<String> getFiles() {
+        return fileToBlob.keySet();
     }
 }

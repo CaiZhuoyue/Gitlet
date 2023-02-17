@@ -13,7 +13,6 @@ import java.util.*;
 import static gitlet.Utils.*;
 
 public class Repository implements Serializable {
-    public File remoteCWD = null;
     public static final File CWD = new File(System.getProperty("user.dir"));
     public static final File GITLET_DIR = join(CWD, ".gitlet");
     public static final File OBJECTS_DIR = join(GITLET_DIR, "objects");
@@ -75,7 +74,7 @@ public class Repository implements Serializable {
 
         String newContent = "";
 
-        // 从config里面删除这一行
+// 从config里面删除这一行
         try {
             Scanner scanner = new Scanner(configFile);
 
@@ -90,7 +89,7 @@ public class Repository implements Serializable {
                         }
                     }
                 } else {
-                    // 否则写到当前文件的config中
+// 否则写到当前文件的config中
                     newContent += line;
                     newContent += "\n";
                 }
@@ -125,10 +124,10 @@ public class Repository implements Serializable {
     }
 
     public void fetch(String remoteName, String remoteBranch) {
-        // 先搬运一些配置文件
+// 先搬运一些配置文件
 
-        // 判断remote branch是否在remote name这个仓库下存在
-        String url = getUrlFromRemoteName(remoteName); // 以.gitlet结尾
+// 判断remote branch是否在remote name这个仓库下存在
+        String url = getUrlFromRemoteName(remoteName); // 不以.gitlet结尾
         System.out.println(url);
 
         File f = join(url, "refs/heads/" + remoteBranch);
@@ -144,7 +143,7 @@ public class Repository implements Serializable {
             REMOTE_HEADS_DIR.mkdir();
         }
 
-        // 获取remote的所有branch的头指针文件
+// 获取remote的所有branch的头指针文件
         File outputDir = join(REMOTE_HEADS_DIR, remoteName);
         if (!outputDir.exists()) {
             outputDir.mkdir();
@@ -155,11 +154,11 @@ public class Repository implements Serializable {
 
         writeContents(outputFile, content);
 
-        // 直接把文件复制过去
+// 直接把文件复制过去
 
-        // 然后处理文件的复制操作等等
-
-
+// 然后处理文件的复制操作等等
+// 把remote里面的所有blob都复制过来
+// 把和这个remoteBranch有关的所有（不在当前repo中的）commit都复制过来
         return;
     }
 
@@ -169,7 +168,7 @@ public class Repository implements Serializable {
      * of the given branch at the given remote.
      * <p>
      * Details:
-     * Only works if the remote branch’s head is in the history of the current local head(不管当前的branch是什么),
+     * Only works if the remote branch’s head is in the history of the current local head,
      * which means that the local branch contains some commits in the future of the remote branch.
      * In this case, append the future commits to the remote branch.
      * Then, the remote should reset to the front of the appended commits
@@ -182,12 +181,12 @@ public class Repository implements Serializable {
      * @param remoteBranch
      */
     public void push(String remoteName, String remoteBranch) {
-        // step 1 找出remote branch的head，找出当前branch的head，如果没有branch就加这个branch
-        // step 2 判断remotehead是否是branchhead的祖先
-        // step 3 如果是的话，就把现在branch超前的commit和commit对应的内容放到remote的objects里面
-        // step 4 更新remotebranch的head内容
+// step 1 找出remote branch的head，找出当前branch的head，如果没有branch就加这个branch
+// step 2 判断remotehead是否是branchhead的祖先
+// step 3 如果是的话，就把现在branch超前的commit和commit对应的内容放到remote的objects里面
+// step 4 更新remotebranch的head内容
 
-        // 查找remoteName，获取directory的地址
+// 查找remoteName，获取directory的地址
         String url = getUrlFromRemoteName(remoteName);
         System.out.println(url);
         File f = new File(url);
@@ -200,26 +199,27 @@ public class Repository implements Serializable {
         String currentHead = currentCommit; // 应该是一个hash值吧
         String remoteHead = getRemoteBranchHead(url, remoteBranch);
 
-        // 找出所有超前的commit
+// 找出所有超前的commit
 
         if (remoteHead.equals("")) { // 表示没有这个remoteHead
-            // 完全复制这个branch过去
+// 完全复制这个branch过去
             System.out.println("没有这个branch，因此新建一个");
         }
 
         List<String> futureCommits = isAncestor(currentHead, remoteHead);
+
         if (futureCommits.isEmpty()) {
             System.out.println("Please pull down remote changes before pushing.");
             return;
         } else {
-            // 所有blob
+// 所有blob
             List<String> blobs = plainFilenamesIn(BLOBS_DIR);
             for (String blob : blobs) {
                 File oldBlob = join(BLOBS_DIR, blob);
                 File newBlob = join(url, "objects/blobs", blob);
                 writeContents(newBlob, readContents(oldBlob));
             }
-            // 所有(超前的)commit
+// 所有(超前的)commit
             for (String commit : futureCommits) {
                 File oldCommit = join(COMMITS_DIR, commit);
                 File newCommit = join(url, "objects/commits", commit);
@@ -227,17 +227,11 @@ public class Repository implements Serializable {
             }
             File remoteHeadFile = join(url, "refs/heads/", remoteBranch);
             writeContents(remoteHeadFile, currentHead);
-            // 然后根据那个commit把文件都弄进去
-            // 根据commit的状态和文件夹的状态
-
-            // 有点难啊。。。。
-
-
-
+// 然后根据那个commit把文件都弄进去
+// 根据commit的状态和文件夹的状态
+            changeRemoteCommit(url, remoteHead, currentHead);
         }
-
-        System.out.println("git push finished"); // 把所有新的commit以及新的blob都复制过去
-
+//        System.out.println("git push finished"); // 把所有新的commit以及新的blob都复制过去
         return;
     }
 
@@ -276,11 +270,12 @@ public class Repository implements Serializable {
             parent1 = commit1.getParent();
             commit1 = Commit.fromFile(parent1);
         }
-
         return futureCommits;
     }
 
     public void pull(String remoteName, String remoteBranch) {
+// fetch之后merge
+// 感觉会很复杂
         return;
     }
 
@@ -300,6 +295,7 @@ public class Repository implements Serializable {
         } else {
             GITLET_DIR.mkdir();
         }
+
         if (!OBJECTS_DIR.exists()) {
             OBJECTS_DIR.mkdir();
         }
@@ -322,11 +318,11 @@ public class Repository implements Serializable {
         if (!BLOBS_DIR.exists()) {
             BLOBS_DIR.mkdir();
         }
-        // 生成初始的commit
+// 生成初始的commit
         Commit commit = new Commit("initial commit", "", "");
-        // HEAD文件里面存放这个初始commit的文件位置
+// HEAD文件里面存放这个初始commit的文件位置
         Utils.writeContents(HEAD_FILE, "refs/heads/master");
-        // heads/master文件存放这个commit的SHA1
+// heads/master文件存放这个commit的SHA1
         writeRefs("master", commit.getHash());
         commit.saveCommit(); // 保存当前commit
         Stage.cleanStage();
@@ -521,6 +517,52 @@ public class Repository implements Serializable {
         Stage.cleanStage();
     }
 
+    public void changeRemoteCommit(String url, String commitID1, String commitID2) {
+        Commit commit1 = Commit.fromRemoteFile(url, commitID1);
+        Commit commit2 = Commit.fromRemoteFile(url, commitID2);
+
+// 在另一个分支中有这个文件，在这个分支中被修改了但是没有add也没有commit
+// 在当前working directory是否有修改（是否和上个commit不同）
+        Set<String> files1 = commit1.getFiles();
+        Set<String> files2 = commit2.getFiles();
+        Set<String> allFiles = new HashSet<>();
+        allFiles.addAll(files1);
+        allFiles.addAll(files2);
+
+        String m = "There is an untracked file in the way;";
+        m += " delete it, or add and commit it first.";
+
+/*
+if (hasUntracked(commitID1, commitID2)) {
+System.out.printf(m);
+return;
+}
+*/
+
+// 问题在这里！！！！！！！！！！！
+/**
+ * 哈哈哈哈哈
+ */
+
+//
+        System.out.println("开始处理文件啦～～～");
+
+        for (String fileName : allFiles) {
+            if (files1.contains(fileName) && !files2.contains(fileName)) {
+                File f = join(url, fileName);
+                if (f.exists()) {
+                    f.delete();
+                }
+//                restrictedDelete(fileName);
+            } else {
+                writeBlobToRemoteFile(url, fileName, commit2.getBlob(fileName));
+            }
+        }
+        System.out.println("文件处理完啦～～～");
+
+        Stage.cleanRemoteStage(url + ".gitlet");
+    }
+
     /**
      * 把blob中的内容写到file中去，是安全的，会判断是否有这个文件
      *
@@ -530,6 +572,85 @@ public class Repository implements Serializable {
     public void writeBlobToFile(String fileName, String blobHash) {
         File f = join(CWD, fileName);
 
+        writeContents(f, Blob.getContentFromFile(blobHash));
+    }
+
+    /**
+     * “Untracked Files” is for files present in the working directory
+     * but neither staged for addition nor tracked.
+     * This includes files that have been staged for removal,
+     * but then re-created without Gitlet’s knowledge.
+     *
+     * @return
+     */
+    public Set<String> getUntrackedFiles() {
+        Commit c = Commit.fromFile(currentCommit);
+        List<String> curFiles = plainFilenamesIn(CWD);
+        Set<String> files = new TreeSet<>();
+
+        for (String file : curFiles) {
+            if (!c.hasFile(file) && !currentStage.hasFile(file)) {
+                files.add(file);
+            } else if (currentStage.hasRemoved(file)) {
+                files.add(file);
+            }
+        }
+        return files;
+    }
+
+    /**
+     * 1:Tracked in the current commit, changed in the working directory, but not staged
+     * 2:Staged for addition, but with different contents than in the working directory
+     * 3:Staged for addition, but deleted in the working directory; or
+     * 4:Not staged for removal, but tracked in the current commit and
+     * deleted from the working directory.
+     *
+     * @return
+     */
+    public Set<String> getModifiedFiles() {
+        Set<String> files = new HashSet<>();
+        List<String> curFiles = plainFilenamesIn(CWD);
+        Commit c = Commit.fromFile(currentCommit);
+        Set<String> trackedFiles = c.getFiles();
+
+        for (String file : curFiles) {
+            if (!currentStage.hasFile(file)) { // case 1:
+                if (c.hasFile(file)) {
+                    Blob b = Blob.fromFile(c.getBlob(file));
+                    String content1 = readContentsAsString(join(CWD, file));
+                    if (!content1.equals(b.getContent())) {
+                        files.add(file + " (modified)");
+                    }
+                }
+            } else { // case 2:
+                String content1 = readContentsAsString(join(CWD, file));
+                Blob b = Blob.fromFile(currentStage.getBlob(file));
+                if (!content1.equals(b.getContent())) {
+                    files.add(file + " (modified)");
+                }
+            }
+        }
+        Set<String> addFiles = currentStage.getFiles();
+        Set<String> removeFiles = currentStage.getRemovedFiles();
+
+        for (String file : addFiles) {
+            if (!curFiles.contains(file)) {
+                files.add(file + " (deleted)");
+            }
+        }
+
+        for (String file : trackedFiles) {
+            if (!curFiles.contains(file) && !removeFiles.contains(file)) {
+                files.add(file + " (deleted)");
+            }
+        }
+
+        return files;
+    }
+
+
+    public void writeBlobToRemoteFile(String url, String fileName, String blobHash) {
+        File f = join(url, fileName);
         writeContents(f, Blob.getContentFromFile(blobHash));
     }
 
@@ -580,7 +701,7 @@ public class Repository implements Serializable {
             System.out.println("No commit with that id exists.");
             return;
         }
-        // 如果有untracked等情况会在这个函数中处理
+// 如果有untracked等情况会在这个函数中处理
         changeCommit(currentCommit, commitID);
 
         writeRefs(currentBranch, commitID); // 头指针指向这个位置
@@ -602,7 +723,7 @@ public class Repository implements Serializable {
         }
         Commit commit = new Commit(message, currentCommit, parent2);
         commit.add(currentStage.getFileToBlob()); // 把stage里面的blob都加进去
-        commit.remove(currentStage.getRemovedFileToBlob()); // 把要remove的blob都remove
+        commit.remove(currentStage.getRemovedFiles()); // 把要remove的blob都remove
         String newCommit = commit.getHash();
         commit.saveCommit();
 
@@ -661,7 +782,7 @@ public class Repository implements Serializable {
         }
         b.saveBlob();
 
-        // 在stage里面加入当前文件和blob名的对应
+// 在stage里面加入当前文件和blob名的对应
         currentStage.add(fileName, blobHash);
         currentStage.saveStage();
     }
@@ -705,8 +826,10 @@ public class Repository implements Serializable {
         showRemoved();
         System.out.println();
         System.out.println("=== Modifications Not Staged For Commit ===");
+        showModifiedButNotStaged();
         System.out.println();
         System.out.println("=== Untracked Files ===");
+        showUntracked();
         System.out.println();
     }
 
@@ -746,7 +869,7 @@ public class Repository implements Serializable {
     public void showRemoved() {
         System.out.println("=== Removed Files ===");
 
-        Set<String> removed = currentStage.getRemovedFileToBlob();
+        Set<String> removed = currentStage.getRemovedFiles();
         for (String file : removed) {
             System.out.println(file);
         }
@@ -761,7 +884,10 @@ public class Repository implements Serializable {
      * and deleted from the working directory.
      */
     public void showModifiedButNotStaged() {
-
+        Set<String> files = getModifiedFiles();
+        for (String file : files) {
+            System.out.println(file);
+        }
     }
 
     /**
@@ -774,8 +900,10 @@ public class Repository implements Serializable {
      * since Gitlet does not deal with them.
      */
     public void showUntracked() {
-        List<String> files = plainFilenamesIn(CWD);
-
+        Set<String> files = getUntrackedFiles();
+        for (String file : files) {
+            System.out.println(file);
+        }
     }
 
     /**
@@ -792,7 +920,7 @@ public class Repository implements Serializable {
         Commit commit1 = Commit.fromFile(commitID1);
         Commit commit2 = Commit.fromFile(commitID2);
 
-        // 处理两个parent的情况
+// 处理两个parent的情况
         if (!commit1.getParent2().equals("")) {
             return findCommonAncestor(commit1.getParent2(), commitID2);
         }
@@ -932,7 +1060,7 @@ public class Repository implements Serializable {
             return;
         }
 
-        // 判断是否有untrackedFiles会被覆盖
+// 判断是否有untrackedFiles会被覆盖
         if (hasUntracked(currentCommit, branchCommit)) {
             String m = "There is an untracked file in the way;";
             m += " delete it, or add and commit it first.";

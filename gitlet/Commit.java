@@ -43,7 +43,7 @@ public class Commit implements Serializable {
     }
 
     public static Commit fromRemoteFile(String url, String commitName) {
-        File temp = join(url, "objects/commits", commitName);
+        File temp = join(url, ".gitlet/objects/commits", commitName);
         Commit commit = readObject(temp, Commit.class);
         return commit;
     }

@@ -220,6 +220,8 @@ So now let’s go over the commands:
   message: `A remote with that name already exists.` You don’t have to check if the user name and server information are
   legit.
 - **Dangerous?**: No.
+- **Design and implementation**
+  - 
 
 #### rm-remote
 

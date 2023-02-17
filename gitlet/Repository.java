@@ -41,8 +41,12 @@ public class Repository implements Serializable {
     public void remoteAdd(String remoteName, String remoteUrl) {
         System.out.println("remote add...");
 
+        String s = "";
         File configFile = join(GITLET_DIR, "config");
-        String s = readContentsAsString(configFile);
+        if (configFile.exists()) {
+            s = readContentsAsString(configFile);
+        }
+//        String s = readContentsAsString(configFile);
 
         if (s.contains("[remote " + remoteName + "]")) {
             System.out.println("A remote with that name already exists.");
@@ -51,82 +55,222 @@ public class Repository implements Serializable {
 
         StringBuilder sb = new StringBuilder();
         sb.append(s);
-        sb.append("[remote " + remoteName + "]\n\t");
-        sb.append("\turl = " + remoteUrl + "\n");
-        sb.append("\tfetch = +refs/heads/*:refs/remotes/" + remoteName + "/*\n");
+        sb.append("[remote " + remoteName + "]\n");
+        sb.append(remoteUrl + "\n"); // 目前来讲存一下url应该就行了
 
         writeContents(configFile, sb.toString());
     }
 
     public void remoteRemove(String remoteName) {
         File configFile = join(GITLET_DIR, "config");
+
         String s = readContentsAsString(configFile);
         String nono = "[remote " + remoteName + "]";
 
         if (!s.contains(nono)) {
             System.out.println("A remote with that name does not exist.");
+            return;
         }
+
+        String newContent = "";
+
         // 从config里面删除这一行
+        try {
+            Scanner scanner = new Scanner(configFile);
+
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+
+                if (line.contains(nono)) {
+                    for (int i = 0; i < 2; i++) { // 跳过这2行的内容
+                        scanner.nextLine();
+                        if (!scanner.hasNextLine()) {
+                            break;
+                        }
+                    }
+                } else {
+                    // 否则写到当前文件的config中
+                    newContent += line;
+                    newContent += "\n";
+                }
+            }
+            scanner.close(); // close the scanner
+        } catch (FileNotFoundException ex) {
+            ex.printStackTrace();
+        }
+        writeContents(configFile, newContent);
+    }
+
+
+    public String getUrlFromRemoteName(String remoteName) {
+        File configFile = join(GITLET_DIR, "config");
 
         try {
             Scanner scanner = new Scanner(configFile);
 
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
-                if (line.contains(nono)) {
-                    for (int i = 0; i < 3; i++) { // 跳过这三行的内容
-                        scanner.nextLine();
-                    }
+
+                if (line.contains("[remote " + remoteName + "]")) {
+                    line = scanner.nextLine();
+                    return line;
                 }
-                System.out.println(line);
             }
             scanner.close(); // close the scanner
         } catch (FileNotFoundException ex) {
             ex.printStackTrace();
         }
-
+        return "";
     }
 
-    public void fetch(String remoteName, String remoteBranch, String tempurl) {
+    public void fetch(String remoteName, String remoteBranch) {
         // 先搬运一些配置文件
-        File remote = join(REMOTE_HEADS_DIR, remoteName);
-        // 还要判断一下是否存在，不存在又是新的做法
 
-        // 把remote url的东西给弄过来
-        String remoteUrl = tempurl;
+        // 判断remote branch是否在remote name这个仓库下存在
+        String url = getUrlFromRemoteName(remoteName); // 以.gitlet结尾
+        System.out.println(url);
 
-        if (remoteUrl.charAt(remoteUrl.length() - 1) != '/') {
-            remoteUrl += '/';
+        File f = join(url, "refs/heads/" + remoteBranch);
+        if (!f.exists()) {
+            System.out.println("That remote does not have that branch.");
+            return;
         }
+        url += "refs/heads/" + remoteBranch;
+        String content = readContentsAsString(f);
+        System.out.println("content:" + content);
 
         if (!REMOTE_HEADS_DIR.exists()) {
             REMOTE_HEADS_DIR.mkdir();
         }
 
         // 获取remote的所有branch的头指针文件
-        remoteUrl = "/Users/caizy/Desktop/CS-self-learning/CS61B/重要Projects/Gitlet/proj2-gitlet/gitlet/dir/d1/.gitlet/refs/heads/";
-//        remoteUrl+="refs/heads/";
-        List<String> remoteHeads = plainFilenamesIn(remoteUrl);
-
-//        List<String> remoteHeads = plainFilenamesIn(remoteUrl + "refs/heads");
-
-        for (String head : remoteHeads) {
-//            File temp = join(remoteUrl, "refs/heads/" + head);
-            File temp = join(remoteUrl, head);
-            String content = readContentsAsString(temp);
-
-            System.out.println(head + ":" + content);
-
-            File output = join(REMOTE_HEADS_DIR, head);
-            writeContents(output, "1");
+        File outputDir = join(REMOTE_HEADS_DIR, remoteName);
+        if (!outputDir.exists()) {
+            outputDir.mkdir();
         }
+        File outputFile = join(outputDir, remoteBranch);
+
+        System.out.println("output:" + outputFile);
+
+        writeContents(outputFile, content);
 
         // 直接把文件复制过去
+
+        // 然后处理文件的复制操作等等
+
+
         return;
     }
 
+
+    /**
+     * Description: Attempts to append the current branch’s commits to the end
+     * of the given branch at the given remote.
+     * <p>
+     * Details:
+     * Only works if the remote branch’s head is in the history of the current local head(不管当前的branch是什么),
+     * which means that the local branch contains some commits in the future of the remote branch.
+     * In this case, append the future commits to the remote branch.
+     * Then, the remote should reset to the front of the appended commits
+     * (so its head will be the same as the local head). This is called fast-forwarding.
+     * <p>
+     * If the Gitlet system on the remote machine exists but does not have the input branch,
+     * then simply add the branch to the remote Gitlet.
+     *
+     * @param remoteName
+     * @param remoteBranch
+     */
     public void push(String remoteName, String remoteBranch) {
+        // step 1 找出remote branch的head，找出当前branch的head，如果没有branch就加这个branch
+        // step 2 判断remotehead是否是branchhead的祖先
+        // step 3 如果是的话，就把现在branch超前的commit和commit对应的内容放到remote的objects里面
+        // step 4 更新remotebranch的head内容
+
+        // 查找remoteName，获取directory的地址
+        String url = getUrlFromRemoteName(remoteName);
+        System.out.println(url);
+        File f = new File(url);
+
+        if (!f.exists()) {
+            System.out.println("Remote directory not found.");
+            return;
+        }
+
+        String currentHead = currentCommit; // 应该是一个hash值吧
+        String remoteHead = getRemoteBranchHead(url, remoteBranch);
+
+        // 找出所有超前的commit
+
+        if (remoteHead.equals("")) { // 表示没有这个remoteHead
+            // 完全复制这个branch过去
+            System.out.println("没有这个branch，因此新建一个");
+        }
+
+        List<String> futureCommits = isAncestor(currentHead, remoteHead);
+        if (futureCommits.isEmpty()) {
+            System.out.println("Please pull down remote changes before pushing.");
+            return;
+        } else {
+            // 所有blob
+            List<String> blobs = plainFilenamesIn(BLOBS_DIR);
+            for (String blob : blobs) {
+                File oldBlob = join(BLOBS_DIR, blob);
+                File newBlob = join(url, "objects/blobs", blob);
+                writeContents(newBlob, readContents(oldBlob));
+            }
+            // 所有(超前的)commit
+            for (String commit : futureCommits) {
+                File oldCommit = join(COMMITS_DIR, commit);
+                File newCommit = join(url, "objects/commits", commit);
+                writeContents(newCommit, readContents(oldCommit));
+            }
+            File remoteHeadFile = join(url, "refs/heads/", remoteBranch);
+            writeContents(remoteHeadFile, currentHead);
+        }
+
+        System.out.println("git push finished"); // 把所有新的commit以及新的blob都复制过去
+
         return;
+    }
+
+    public String getRemoteBranchHead(String url, String remoteBranch) {
+        File f = join(url, "refs/heads", remoteBranch);
+        if (!f.exists()) {
+//            System.out.println("file " + f.toString() + " does not exist");
+            return "";
+        } else {
+            return readContentsAsString(f);
+        }
+    }
+
+    /**
+     * 判断remoteHead是不是curHead的祖先
+     * 遍历curHead的所有祖先，看看有没有remoteHead的hash
+     *
+     * @param curHead
+     * @param remoteHead
+     * @return
+     */
+    public List<String> isAncestor(String curHead, String remoteHead) {
+        List<String> futureCommits = new ArrayList<>();
+
+        int length = commitLength(curHead);
+
+        Commit commit1 = Commit.fromFile(curHead);
+        String parent1;
+
+        for (int i = 0; i < length-1; i++) {
+            if (commit1.getHash().equals(remoteHead)) {
+                break;
+            } else {
+                System.out.println("future commit: " + commit1.getHash());
+                futureCommits.add(commit1.getHash());
+            }
+            parent1 = commit1.getParent();
+            commit1 = Commit.fromFile(parent1);
+        }
+
+        return futureCommits;
     }
 
     public void pull(String remoteName, String remoteBranch) {

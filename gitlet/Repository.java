@@ -139,45 +139,76 @@ public class Repository implements Serializable {
         return "";
     }
 
+    /**
+     * 把这个remote源的remoteBranch的所有内容都下载下来
+     *
+     * @param remoteName
+     * @param remoteBranch
+     */
     public void fetch(String remoteName, String remoteBranch) {
 // 先搬运一些配置文件
-
 // 判断remote branch是否在remote name这个仓库下存在
         String url = getUrlFromRemoteName(remoteName); // 不以.gitlet结尾
-        System.out.println(url);
+        System.out.println("remote repo的url是" + url);
 
-        File f = join(url, "refs/heads/" + remoteBranch);
+//        Repository remoteRepo = new Repository(url);
+//        if (remoteRepo != null) {
+//            System.out.println("remote repo 建立成功...");
+//        }
+
+        File f = join(url, ".gitlet/refs/heads/" + remoteBranch);
+        System.out.println("记录remote branch的Head的文件是" + f.toString());
+
         if (!f.exists()) {
             System.out.println("That remote does not have that branch.");
             return;
         }
-        url += "refs/heads/" + remoteBranch;
-        String content = readContentsAsString(f);
-        System.out.println("content:" + content);
 
         if (!REMOTE_HEADS_DIR.exists()) {
             REMOTE_HEADS_DIR.mkdir();
         }
-
 // 获取remote的所有branch的头指针文件
+        System.out.println(REMOTE_HEADS_DIR);
+
         File outputDir = join(REMOTE_HEADS_DIR, remoteName);
         if (!outputDir.exists()) {
             outputDir.mkdir();
         }
+        // 输出到类似 xxx/.gitlet/refs/remotes/other
+        String content = readContentsAsString(f);
         File outputFile = join(outputDir, remoteBranch);
-
-        System.out.println("output:" + outputFile);
-
         writeContents(outputFile, content);
 
-// 直接把文件复制过去
+        // 然后处理文件的复制操作等等
+        // 把remote里面的所有blob都复制过来
+        // 把和这个remoteBranch有关的所有（不在当前repo中的）commit都复制过来
+        moveBlobs(url, 2);
+        // remote的所有commit
+        System.out.println(content);
+        moveCommits(url, getRemoteCommits(url, content), 2);
 
-// 然后处理文件的复制操作等等
-// 把remote里面的所有blob都复制过来
-// 把和这个remoteBranch有关的所有（不在当前repo中的）commit都复制过来
         return;
     }
 
+    /**
+     * 从remote repo的url中获取某一个commit以及其所有的previous commits
+     * url不是.gitlet结尾
+     *
+     * @param url
+     * @param remoteHead
+     * @return
+     */
+    public List<String> getRemoteCommits(String url, String remoteHead) {
+        List<String> commits = new ArrayList<>();
+
+        Commit commit = Commit.fromRemoteFile(url, remoteHead);
+
+        while (!commit.getParent().equals("")) {
+            commits.add(commit.getHash());
+            commit = Commit.fromRemoteFile(url, commit.getParent());
+        }
+        return commits;
+    }
 
     /**
      * Description: Attempts to append the current branch’s commits to the end
@@ -228,27 +259,61 @@ public class Repository implements Serializable {
             System.out.println("Please pull down remote changes before pushing.");
             return;
         } else {
-// 所有blob
-            List<String> blobs = plainFilenamesIn(BLOBS_DIR);
-            for (String blob : blobs) {
-                File oldBlob = join(BLOBS_DIR, blob);
-                File newBlob = join(url, "objects/blobs", blob);
-                writeContents(newBlob, readContents(oldBlob));
-            }
-// 所有(超前的)commit
-            for (String commit : futureCommits) {
-                File oldCommit = join(COMMITS_DIR, commit);
-                File newCommit = join(url, "objects/commits", commit);
-                writeContents(newCommit, readContents(oldCommit));
-            }
+            // 所有blob
+            moveBlobs(url, 1);
+
+            // 所有(超前的)commit
+            moveCommits(url, futureCommits, 1);
+
             File remoteHeadFile = join(url, "refs/heads/", remoteBranch);
             writeContents(remoteHeadFile, currentHead);
-// 然后根据那个commit把文件都弄进去
-// 根据commit的状态和文件夹的状态
+            // 然后根据那个commit把文件都弄进去
+            // 根据commit的状态和文件夹的状态
             changeRemoteCommit(url, remoteHead, currentHead);
         }
 //        System.out.println("git push finished"); // 把所有新的commit以及新的blob都复制过去
         return;
+    }
+
+    /**
+     * 把当前文件夹的所有blobs复制到url对应的blobs文件夹去
+     *
+     * @param url
+     */
+    public void moveBlobs(String url, int type) {
+        List<String> blobs;
+        if (type == 1) {
+            blobs = plainFilenamesIn(BLOBS_DIR);
+        } else {
+            blobs = plainFilenamesIn(join(url, ".gitlet/objects/blobs"));
+        }
+        for (String blob : blobs) {
+            File oldBlob = join(BLOBS_DIR, blob);
+            File newBlob = join(url, ".gitlet/objects/blobs", blob);
+            if (type == 1) {
+                writeContents(newBlob, readContents(oldBlob));
+            } else if (type == 2) {
+                writeContents(oldBlob, readContents(newBlob));
+            }
+        }
+    }
+
+    /**
+     * 把当前文件夹的一些commits复制到url对应的commits文件夹去
+     *
+     * @param url
+     * @param commits
+     */
+    public void moveCommits(String url, List<String> commits, int type) {
+        for (String commit : commits) {
+            File oldCommit = join(COMMITS_DIR, commit);
+            File newCommit = join(url, ".gitlet/objects/commits", commit);
+            if (type == 1) {
+                writeContents(newCommit, readContentsAsString(oldCommit));
+            } else if (type == 2) {
+                writeContents(oldCommit, readContentsAsString(newCommit));
+            }
+        }
     }
 
     public String getRemoteBranchHead(String url, String remoteBranch) {
@@ -291,6 +356,10 @@ public class Repository implements Serializable {
 
     public void pull(String remoteName, String remoteBranch) {
 // fetch之后merge
+        fetch(remoteName, remoteBranch);
+
+        merge2("origin:other");
+
 // 感觉会很复杂
         return;
     }

@@ -154,9 +154,20 @@ public class Repository implements Serializable {
 // 判断remote branch是否在remote name这个仓库下存在
         String url = getUrlFromRemoteName(remoteName); // 不以.gitlet结尾
 
-        File f = join(url, ".gitlet/refs/heads/" + remoteBranch);
+        // 有这一段就报错
+//        File f1 = join(CWD, url);
+//        if (!f1.exists()) {
+//            System.out.println("Remote directory not found.");
+//            return;
+//        }
+//        File f1 = new File(url);
+//        if (!f1.exists()) {
+//            System.out.println("Remote directory not found.");
+//            return;
+//        }
 
-        if (!f.exists()) {
+        File f2 = join(url, ".gitlet/refs/heads/" + remoteBranch);
+        if (!f2.exists()) {
             System.out.println("That remote does not have that branch.");
             return;
         }
@@ -172,7 +183,7 @@ public class Repository implements Serializable {
             outputDir.mkdir();
         }
         // 输出到类似 xxx/.gitlet/refs/remotes/other
-        String content = readContentsAsString(f);
+        String content = readContentsAsString(f2);
         File outputFile = join(outputDir, remoteBranch);
         writeContents(outputFile, content);
 
@@ -233,6 +244,7 @@ public class Repository implements Serializable {
 // 查找remoteName，获取directory的地址
         String url = getUrlFromRemoteName(remoteName);
 
+        // 有这一段就报错
 //        File f = new File(url);
 //        if (!f.exists()) {
 //            System.out.println("Remote directory not found.");
@@ -246,9 +258,9 @@ public class Repository implements Serializable {
 
         List<String> futureCommits = isAncestor(currentHead, remoteHead);
 
-
+        // 为什么在err的test中没有提示呢？
+        // 如果currentHead不是remoteHead的祖先 没有futureCommits的话
         if (futureCommits.isEmpty()) {
-//        if (false) {
             System.out.println("Please pull down remote changes before pushing.");
             return;
         } else {
@@ -347,7 +359,6 @@ public class Repository implements Serializable {
             if (commit1.getHash().equals(remoteHead)) {
                 break;
             } else {
-//                System.out.println("future commit: " + commit1.getHash());
                 futureCommits.add(commit1.getHash());
             }
             parent1 = commit1.getParent();

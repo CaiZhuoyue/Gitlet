@@ -82,6 +82,7 @@ public class Main {
                 break;
             case "pull":
                 repo.pull(args[1], args[2]);
+                break;
             default:
                 System.out.println("No command with that name exists.");
                 System.exit(0);

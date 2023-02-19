@@ -66,7 +66,7 @@ public class Main {
                 repo.findCommonAncestor(args[1], args[2]);
                 break;
             case "merge":
-                repo.merge2(args[1]);
+                repo.merge(args[1], 1);
                 break;
             case "add-remote":
                 repo.remoteAdd(args[1], args[2]);
@@ -80,6 +80,8 @@ public class Main {
             case "push":
                 repo.push(args[1], args[2]);
                 break;
+            case "pull":
+                repo.pull(args[1], args[2]);
             default:
                 System.out.println("No command with that name exists.");
                 System.exit(0);

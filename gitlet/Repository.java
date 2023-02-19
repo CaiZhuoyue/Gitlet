@@ -23,10 +23,10 @@ public class Repository implements Serializable {
     private static File BRANCH_HEADS_DIR;
     private static File REMOTE_HEADS_DIR;
     private static File INDEX_FILE;
-    String currentCommit; // 当前commit的对应SHA1
-    String currentBranchPath; // "refs/heads/master"
-    String currentBranch; // "master"
-    Stage currentStage;
+    private String currentCommit; // 当前commit的对应SHA1
+    private String currentBranchPath = "refs/heads/master"; // "refs/heads/master"
+    private String currentBranch = "master"; // "master"
+    private Stage currentStage = new Stage();
 
     public Repository() {
         this(System.getProperty("user.dir"));
@@ -55,14 +55,18 @@ public class Repository implements Serializable {
     }
 
     public void remoteAdd(String remoteName, String remoteUrl) {
-        System.out.println("remote add...");
+
+        String[] temp = remoteUrl.split("/");
+        remoteUrl = "";
+        for (int i = 0; i < temp.length - 1; i++) {
+            remoteUrl += temp[i] + "/"; // 把.gitlet弄走了
+        }
 
         String s = "";
         File configFile = join(GITLET_DIR, "config");
         if (configFile.exists()) {
             s = readContentsAsString(configFile);
         }
-//        String s = readContentsAsString(configFile);
 
         if (s.contains("[remote " + remoteName + "]")) {
             System.out.println("A remote with that name already exists.");
@@ -149,15 +153,8 @@ public class Repository implements Serializable {
 // 先搬运一些配置文件
 // 判断remote branch是否在remote name这个仓库下存在
         String url = getUrlFromRemoteName(remoteName); // 不以.gitlet结尾
-        System.out.println("remote repo的url是" + url);
-
-//        Repository remoteRepo = new Repository(url);
-//        if (remoteRepo != null) {
-//            System.out.println("remote repo 建立成功...");
-//        }
 
         File f = join(url, ".gitlet/refs/heads/" + remoteBranch);
-        System.out.println("记录remote branch的Head的文件是" + f.toString());
 
         if (!f.exists()) {
             System.out.println("That remote does not have that branch.");
@@ -168,7 +165,7 @@ public class Repository implements Serializable {
             REMOTE_HEADS_DIR.mkdir();
         }
 // 获取remote的所有branch的头指针文件
-        System.out.println(REMOTE_HEADS_DIR);
+//        System.out.println(REMOTE_HEADS_DIR);
 
         File outputDir = join(REMOTE_HEADS_DIR, remoteName);
         if (!outputDir.exists()) {
@@ -181,10 +178,10 @@ public class Repository implements Serializable {
 
         // 然后处理文件的复制操作等等
         // 把remote里面的所有blob都复制过来
+
         // 把和这个remoteBranch有关的所有（不在当前repo中的）commit都复制过来
         moveBlobs(url, 2);
         // remote的所有commit
-        System.out.println(content);
         moveCommits(url, getRemoteCommits(url, content), 2);
 
         return;
@@ -235,7 +232,7 @@ public class Repository implements Serializable {
 
 // 查找remoteName，获取directory的地址
         String url = getUrlFromRemoteName(remoteName);
-        System.out.println(url);
+//        System.out.println(url);
         File f = new File(url);
 
         if (!f.exists()) {
@@ -250,28 +247,30 @@ public class Repository implements Serializable {
 
         if (remoteHead.equals("")) { // 表示没有这个remoteHead
 // 完全复制这个branch过去
-            System.out.println("没有这个branch，因此新建一个");
+//            System.out.println("没有这个branch，因此新建一个");
         }
 
         List<String> futureCommits = isAncestor(currentHead, remoteHead);
 
+
         if (futureCommits.isEmpty()) {
+//        if (false) {
             System.out.println("Please pull down remote changes before pushing.");
             return;
         } else {
             // 所有blob
-            moveBlobs(url, 1);
+//            moveBlobs(url, 1);
 
             // 所有(超前的)commit
-            moveCommits(url, futureCommits, 1);
+//            moveCommits(url, futureCommits, 1);
 
-            File remoteHeadFile = join(url, "refs/heads/", remoteBranch);
+            File remoteHeadFile = join(url, ".gitlet/refs/heads/", remoteBranch);
+            // 难道是这个？
             writeContents(remoteHeadFile, currentHead);
             // 然后根据那个commit把文件都弄进去
             // 根据commit的状态和文件夹的状态
             changeRemoteCommit(url, remoteHead, currentHead);
         }
-//        System.out.println("git push finished"); // 把所有新的commit以及新的blob都复制过去
         return;
     }
 
@@ -290,10 +289,19 @@ public class Repository implements Serializable {
         for (String blob : blobs) {
             File oldBlob = join(BLOBS_DIR, blob);
             File newBlob = join(url, ".gitlet/objects/blobs", blob);
-            if (type == 1) {
-                writeContents(newBlob, readContents(oldBlob));
-            } else if (type == 2) {
-                writeContents(oldBlob, readContents(newBlob));
+
+            if (type == 1 && !newBlob.exists()) {
+                try {
+                    Files.copy(oldBlob.toPath(), newBlob.toPath());
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            } else if (type == 2 && !oldBlob.exists()) {
+                try {
+                    Files.copy(newBlob.toPath(), oldBlob.toPath());
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
     }
@@ -309,15 +317,15 @@ public class Repository implements Serializable {
             File oldCommit = join(COMMITS_DIR, commit);
             File newCommit = join(url, ".gitlet/objects/commits", commit);
             if (type == 1) {
-                writeContents(newCommit, readContentsAsString(oldCommit));
+                writeContents(newCommit, readContents(oldCommit));
             } else if (type == 2) {
-                writeContents(oldCommit, readContentsAsString(newCommit));
+                writeContents(oldCommit, readContents(newCommit));
             }
         }
     }
 
     public String getRemoteBranchHead(String url, String remoteBranch) {
-        File f = join(url, "refs/heads", remoteBranch);
+        File f = join(url, ".gitlet/refs/heads", remoteBranch);
         if (!f.exists()) {
             return "";
         } else {
@@ -345,7 +353,7 @@ public class Repository implements Serializable {
             if (commit1.getHash().equals(remoteHead)) {
                 break;
             } else {
-                System.out.println("future commit: " + commit1.getHash());
+//                System.out.println("future commit: " + commit1.getHash());
                 futureCommits.add(commit1.getHash());
             }
             parent1 = commit1.getParent();
@@ -357,9 +365,7 @@ public class Repository implements Serializable {
     public void pull(String remoteName, String remoteBranch) {
 // fetch之后merge
         fetch(remoteName, remoteBranch);
-
-        merge2("origin:other");
-
+        merge(remoteBranch, 2);
 // 感觉会很复杂
         return;
     }
@@ -479,7 +485,7 @@ public class Repository implements Serializable {
                 return;
             }
             String fileName = args[2];
-            checkout(getBranchHead(currentBranch), fileName);
+            checkout(getBranchHead(currentBranch, 1, ""), fileName);
         } else { // checkout [commit id] -- [file name]
             if (!args[2].equals("--")) {
                 System.out.println("Incorrect operands.");
@@ -497,19 +503,37 @@ public class Repository implements Serializable {
      * @param branch
      */
     public void checkout(String branch) {
+        String[] temp = branch.split("/");
+        int type = temp.length;
+
         if (branch.equals(currentBranch)) {
             System.out.println("No need to checkout the current branch. ");
             return;
         }
-        if (!hasBranch(branch)) {
+        if (type == 1 && !hasBranch(branch, 1, "")) {
             System.out.println("No such branch exists.");
             return; // 没有这个branch
         }
-        String commitID = getBranchHead(branch); // new branch的HEAD指向的commitid
+
+        if (type == 2 && !hasBranch(temp[1], 2, temp[0])) {
+            System.out.println("No such branch exists.");
+            return; // 没有这个branch
+        }
+
+        String commitID;
+        if (type == 1) {
+            commitID = getBranchHead(branch, 1, ""); // new branch的HEAD指向的commitid
+        } else {
+            commitID = getBranchHead(temp[1], 2, temp[0]); // new branch的HEAD指向的commitid
+        }
 
         changeCommit(currentCommit, commitID);
 
-        writeContents(HEAD_FILE, "refs/heads/" + branch);
+        if (type == 1) {
+            writeContents(HEAD_FILE, "refs/heads/" + branch);
+        } else {
+            writeContents(HEAD_FILE, "refs/remotes/" + branch);
+        }
     }
 
     /**
@@ -551,13 +575,23 @@ public class Repository implements Serializable {
      * @param branch
      * @return
      */
-    public String getBranchHead(String branch) {
-        File file = join(BRANCH_HEADS_DIR, branch);
+    public String getBranchHead(String branch, int type, String remote) {
+        File file;
+        if (type == 1) {
+            file = join(BRANCH_HEADS_DIR, branch);
+        } else {
+            file = join(REMOTE_HEADS_DIR, remote, branch);
+        }
         return readContentsAsString(file);
     }
 
-    public boolean hasBranch(String branch) {
-        File file = join(BRANCH_HEADS_DIR, branch);
+    public boolean hasBranch(String branch, int type, String remote) {
+        File file;
+        if (type == 1) {
+            file = join(BRANCH_HEADS_DIR, branch);
+        } else {
+            file = join(REMOTE_HEADS_DIR, remote, branch);
+        }
         return file.exists();
     }
 
@@ -631,7 +665,7 @@ return;
  */
 
 //
-        System.out.println("开始处理文件啦～～～");
+//        System.out.println("开始处理文件啦～～～");
 
         for (String fileName : allFiles) {
             if (files1.contains(fileName) && !files2.contains(fileName)) {
@@ -644,9 +678,9 @@ return;
                 writeBlobToRemoteFile(url, fileName, commit2.getBlob(fileName));
             }
         }
-        System.out.println("文件处理完啦～～～");
+//        System.out.println("文件处理完啦～～～");
 
-        Stage.cleanRemoteStage(url + ".gitlet");
+        Stage.cleanRemoteStage(url);
     }
 
     /**
@@ -772,7 +806,7 @@ return;
             System.out.println("Cannot remove the current branch.");
             return;
         }
-        if (!hasBranch(branch)) {
+        if (!hasBranch(branch, 1, "")) {
             System.out.println("A branch with that name does not exist.");
             return; // 没有这个branch
         }
@@ -1124,20 +1158,31 @@ return;
         return -1;
     }
 
-    public void merge2(String branch) {
+    public void merge(String branch, int type) {
+        String remote = "";
+
+        if (type == 2) {
+            String[] temp = branch.split("/");
+            branch = temp[1];
+            remote = temp[0];
+//            System.out.println("remote:" + remote);
+//            System.out.println("branch" + branch);
+        }
+
         if (!currentStage.empty()) {
             System.out.println("You have uncommitted changes.");
             return;
         }
-        if (!hasBranch(branch)) {
+        if (!hasBranch(branch, type, remote)) {
             System.out.println("A branch with that name does not exist.");
             return;
         }
-        if (branch.equals(currentBranch)) {
+        if (type != 2 && branch.equals(currentBranch)) {
             System.out.println("Cannot merge a branch with itself. ");
             return;
         }
-        String branchCommit = getBranchHead(branch);
+
+        String branchCommit = getBranchHead(branch, type, remote);
         String splitPoint = findCommonAncestor(currentCommit, branchCommit);
 
         if (splitPoint.equals(currentCommit)) { // 分支点=等于当前分支 切换到给定分支

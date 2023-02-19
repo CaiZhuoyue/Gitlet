@@ -31,8 +31,13 @@ public class Test {
 //        // 在D2中
 //        repo.init();
 //        repo.add("k.txt");
-        repo.commit("Add k in repo2", "");
+//        repo.commit("Add k in repo2", "");
 //        repo.log();
+//        repo.remoteAdd("R1","../D1/.gitlet");
+//        repo.fetch("R1","glorp");
+//        repo.push("R1", "master");
+        repo.log();
+//        add-remote R1 ../D1/.gitlet
     }
 
     @org.junit.Test

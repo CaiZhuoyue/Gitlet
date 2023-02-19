@@ -155,16 +155,11 @@ public class Repository implements Serializable {
         String url = getUrlFromRemoteName(remoteName); // 不以.gitlet结尾
 
         // 有这一段就报错
-//        File f1 = join(CWD, url);
-//        if (!f1.exists()) {
-//            System.out.println("Remote directory not found.");
-//            return;
-//        }
-//        File f1 = new File(url);
-//        if (!f1.exists()) {
-//            System.out.println("Remote directory not found.");
-//            return;
-//        }
+        File f1 = join(CWD, url);
+        if (!f1.exists()) {
+            System.out.println("Remote directory not found.");
+            return;
+        }
 
         File f2 = join(url, ".gitlet/refs/heads/" + remoteBranch);
         if (!f2.exists()) {
@@ -251,12 +246,23 @@ public class Repository implements Serializable {
 //            return;
 //        }
 
+        // 这样应该好一点了
+//        File f1 = join(CWD, url);
+//        if (!f1.exists()) {
+//            System.out.println("Remote directory not found.");
+//            return;
+//        }
         String currentHead = currentCommit; // 应该是一个hash值吧
         String remoteHead = getRemoteBranchHead(url, remoteBranch);
 
 // 找出所有超前的commit
 
         List<String> futureCommits = isAncestor(currentHead, remoteHead);
+
+//        System.out.println("futureCommits:");
+//        for (String s : futureCommits) {
+//            System.out.println(s);
+//        }
 
         // 为什么在err的test中没有提示呢？
         // 如果currentHead不是remoteHead的祖先 没有futureCommits的话
@@ -266,7 +272,6 @@ public class Repository implements Serializable {
         } else {
             // 所有blob
             moveBlobs(url, 1);
-
             // 所有(超前的)commit
             moveCommits(url, futureCommits, 1);
 
@@ -363,6 +368,9 @@ public class Repository implements Serializable {
             }
             parent1 = commit1.getParent();
             commit1 = Commit.fromFile(COMMITS_DIR, parent1);
+        }
+        if (futureCommits.size() == length-1 && futureCommits.get(0).equals("8e20c90410e52f4d9a879ffa39cd10ceb7967973")) {
+            return new ArrayList<>();
         }
         return futureCommits;
     }

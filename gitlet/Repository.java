@@ -232,23 +232,17 @@ public class Repository implements Serializable {
 
 // 查找remoteName，获取directory的地址
         String url = getUrlFromRemoteName(remoteName);
-//        System.out.println(url);
-        File f = new File(url);
 
-        if (!f.exists()) {
-            System.out.println("Remote directory not found.");
-            return;
-        }
+//        File f = new File(url);
+//        if (!f.exists()) {
+//            System.out.println("Remote directory not found.");
+//            return;
+//        }
 
         String currentHead = currentCommit; // 应该是一个hash值吧
         String remoteHead = getRemoteBranchHead(url, remoteBranch);
 
 // 找出所有超前的commit
-
-        if (remoteHead.equals("")) { // 表示没有这个remoteHead
-// 完全复制这个branch过去
-//            System.out.println("没有这个branch，因此新建一个");
-        }
 
         List<String> futureCommits = isAncestor(currentHead, remoteHead);
 
@@ -259,10 +253,10 @@ public class Repository implements Serializable {
             return;
         } else {
             // 所有blob
-//            moveBlobs(url, 1);
+            moveBlobs(url, 1);
 
             // 所有(超前的)commit
-//            moveCommits(url, futureCommits, 1);
+            moveCommits(url, futureCommits, 1);
 
             File remoteHeadFile = join(url, ".gitlet/refs/heads/", remoteBranch);
             // 难道是这个？
@@ -365,7 +359,7 @@ public class Repository implements Serializable {
     public void pull(String remoteName, String remoteBranch) {
 // fetch之后merge
         fetch(remoteName, remoteBranch);
-        merge(remoteBranch, 2);
+        merge(remoteName + "/" + remoteBranch, 2);
 // 感觉会很复杂
         return;
     }
@@ -1165,8 +1159,6 @@ return;
             String[] temp = branch.split("/");
             branch = temp[1];
             remote = temp[0];
-//            System.out.println("remote:" + remote);
-//            System.out.println("branch" + branch);
         }
 
         if (!currentStage.empty()) {
@@ -1228,6 +1220,11 @@ return;
             System.out.println("Encountered a merge conflict.");
         }
         String msg = "Merged " + branch + " into " + currentBranch + ".";
+
+        if (type == 2) {
+            msg = "Merged " + remote + "/" + branch + " into " + currentBranch + ".";
+        }
+
         commit(msg, branchCommit);
 
         if (splitPoint.equals(branchCommit)) { // 分支点=给定分支 不做任何处理

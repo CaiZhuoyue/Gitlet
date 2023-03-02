@@ -1,23 +1,6 @@
 # Gitlet Design Document
 
-**Author:caizhuoyue**
-
-一些要点
-
-* final关键词表示赋值一次之后就不能改变，对于一些需要改动的map就不能用final关键词
-* 不需要给外界使用的函数就可以设置为private
-
-代码放github 简历附上自己id或直接给项目链接
-
-工业界git的实现，深入了解原理（git的重点优势是协同开发、不是本地保存）
-
-提merge request
-
-如果a和b文件冲突怎么办
-
-大厂测试实习可以放在work experience里面。
-
-project里面可以放你的java git; 预约管理; 打卡程序。具体顺序根据你实习岗位相关性。
+Author:caizhuoyue
 
 ### 使用方式：
 
@@ -357,4 +340,4 @@ the given and current branches. In this case, replace the contents of the confli
 
 **6.在`HEAD`中没有修改，在`other`中被删除了**，remove这个文件（同时untract）
 
-**7.在`other`中没有修改，在`HEAD`中被删除了，**不用改，remain absent
+**7.在`other`中没有修改，在`HEAD`中被删除了**，不用改，remain absent
